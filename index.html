@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en" data-theme="midnight">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RetroArch Control</title>
+    <script>
+      // Apply saved theme before paint to avoid flash
+      try {
+        var t = localStorage.getItem("ra-theme");
+        if (t === "light" || t === "tokyo-night" || t === "midnight") {
+          document.documentElement.setAttribute("data-theme", t);
+        }
+      } catch (e) {}
+    </script>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+  <body>
+    <!-- First-run legal disclaimer (must accept once) -->
+    <div id="disclaimer-overlay" class="disclaimer-overlay" hidden>
+      <div
+        class="disclaimer-modal"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="disclaimer-title"
+        aria-describedby="disclaimer-body"
+      >
+        <header class="disclaimer-header">
+          <h2 id="disclaimer-title">Disclaimer</h2>
+        </header>
+        <div class="disclaimer-body" id="disclaimer-body">
+          <p class="disclaimer-lead">
+            Before using <strong>RetroArch Control</strong>, please confirm the following.
+          </p>
+          <ul class="disclaimer-list">
+            <li>
+              You have <strong>purchased or otherwise legally obtained</strong> any Amiga ROMs,
+              disk images (<code>.adf</code>), Kickstart BIOS files, and games you install or use
+              with this application.
+            </li>
+            <li>
+              You will only download and use software you are
+              <strong>legally entitled</strong> to use in your jurisdiction.
+            </li>
+            <li>
+              <strong>Copyright and abandonware laws differ by country.</strong> What is allowed
+              where you live may not be allowed elsewhere. You must understand and follow the laws
+              that apply to you.
+            </li>
+            <li>
+              Linked third-party game sites are provided for convenience only. This app does
+              <strong>not</strong> host or distribute copyrighted game files.
+            </li>
+            <li>
+              <strong>Your actions are your own.</strong> You are solely responsible for compliance
+              with copyright and local law. The authors of this tool accept no liability for misuse.
+            </li>
+          </ul>
+          <p class="disclaimer-foot muted">
+            This software is a local utility for controlling RetroArch on your TV. It is not
+            affiliated with Commodore, Cloanto, Lemon Amiga, Internet Archive, Hall of Light, or any
+            listed third-party site.
+          </p>
+        </div>
+        <footer class="disclaimer-footer">
+          <button type="button" id="btn-disclaimer-accept" class="primary">
+            I understand — I own my games / ROMs
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Pinned app bar (outside #app so scroll never moves it) -->
+    <header class="top" id="app-bar">
+      <div class="brand">
+        <img src="/src/assets/logo.png" alt="" class="app-logo" width="48" height="48" />
+        <div>
+          <h1>RetroArch Control</h1>
+          <p class="sub">webOS TV · SSH · PUAE / cores / disks</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button type="button" id="btn-settings" class="secondary">Settings</button>
+        <div class="conn-badge" id="conn-badge">disconnected</div>
+      </div>
+    </header>
+
+      <div id="settings-panel" class="settings-overlay" hidden>
+        <div class="settings-modal" role="dialog" aria-labelledby="settings-title">
+          <header class="settings-header">
+            <div>
+              <h2 id="settings-title">Settings</h2>
+              <p class="settings-lead">Configure SSH to the TV and where Amiga files live on device.</p>
+            </div>
+            <button type="button" id="btn-settings-close" class="secondary" aria-label="Close settings">
+              ✕
+            </button>
+          </header>
+
+          <div class="settings-body">
+            <!-- Appearance -->
+            <section class="settings-card">
+              <div class="settings-card-title">
+                <span class="step">✦</span>
+                <div>
+                  <h3>Appearance</h3>
+                  <p>Color theme for this app (also used by mouse, volume, and keyboard windows).</p>
+                </div>
+              </div>
+              <label class="theme-field">
+                Theme
+                <select id="theme-select" aria-label="Color theme">
+                  <option value="midnight">Midnight</option>
+                  <option value="light">Light</option>
+                  <option value="tokyo-night">Tokyo Night</option>
+                </select>
+              </label>
+            </section>
+
+            <!-- Card 1: SSH -->
+            <section class="settings-card">
+              <div class="settings-card-title">
+                <span class="step">1</span>
+                <div>
+                  <h3>SSH connection</h3>
+                  <p>How this Mac reaches the LG TV. Required for every command.</p>
+                </div>
+              </div>
+
+              <div class="grid-host">
+                <label>
+                  Host / IP
+                  <input id="host" type="text" spellcheck="false" placeholder="192.168.0.79" />
+                </label>
+                <label>
+                  User
+                  <input id="user" type="text" spellcheck="false" placeholder="root" />
+                </label>
+                <label>
+                  Port
+                  <input id="port" type="number" min="1" max="65535" placeholder="22" />
+                </label>
+              </div>
+
+              <label class="key-field">
+                SSH private key <span class="where">on this Mac</span>
+                <span class="field-hint" id="sshKey-hint">
+                  Usual project key:
+                  <code id="sshKey-default">~/.ssh/webos_deploy</code>
+                </span>
+                <div class="path-row">
+                  <input
+                    id="sshKey"
+                    type="text"
+                    spellcheck="false"
+                    placeholder="~/.ssh/webos_deploy"
+                    aria-describedby="sshKey-resolved sshKey-status"
+                  />
+                  <button type="button" id="btn-browse-key" class="secondary">Browse…</button>
+                  <button type="button" id="btn-reveal-key" class="secondary">Show in Finder</button>
+                  <button type="button" id="btn-use-default-key" class="secondary">Use default</button>
+                </div>
+                <span class="path-resolved mono" id="sshKey-resolved"></span>
+                <span class="field-status" id="sshKey-status"></span>
+              </label>
+
+              <label>
+                Control script <span class="where">on this Mac</span>
+                <span class="field-hint">Shell helper that talks to the TV</span>
+                <div class="path-row">
+                  <input
+                    id="scriptPath"
+                    type="text"
+                    spellcheck="false"
+                    placeholder="~/src/RetroArch/webos/control-retroarch.sh"
+                  />
+                  <button type="button" id="btn-browse-script" class="secondary">Browse…</button>
+                </div>
+                <span class="field-status" id="scriptPath-status"></span>
+              </label>
+
+              <label>
+                Extra SSH options <span class="opt">(optional)</span>
+                <input
+                  id="sshExtra"
+                  type="text"
+                  spellcheck="false"
+                  placeholder="e.g. -o ProxyJump=bastion"
+                />
+              </label>
+
+              <div class="card-actions ssh-test-row">
+                <button type="button" id="btn-test-ssh" class="secondary">Test SSH</button>
+                <span class="field-status" id="ssh-test-status" aria-live="polite"></span>
+              </div>
+            </section>
+
+            <!-- Card 2: Amiga on TV -->
+            <section class="settings-card">
+              <div class="settings-card-title">
+                <span class="step">2</span>
+                <div>
+                  <h3>Amiga paths on the TV</h3>
+                  <p>
+                    Folders <strong>on the LG TV filesystem</strong> — not on your Mac.
+                    <code>.adf</code> = disk images · Kickstart = BIOS ROMs.
+                  </p>
+                </div>
+              </div>
+
+              <label>
+                ADF disks directory
+                <span class="field-hint">Floppy disk images (<code>.adf</code>)</span>
+                <input
+                  id="disksDir"
+                  type="text"
+                  spellcheck="false"
+                  placeholder="/media/developer/apps/.../disks/amiga"
+                />
+              </label>
+
+              <label>
+                Kickstart / system directory
+                <span class="field-hint">BIOS ROMs (<code>kick34005.A500</code>, etc.)</span>
+                <input
+                  id="systemDir"
+                  type="text"
+                  spellcheck="false"
+                  placeholder="/media/developer/apps/.../system"
+                />
+              </label>
+
+              <label>
+                RetroArch config root
+                <span class="field-hint">Parent of disks/, system/, cores/</span>
+                <input
+                  id="raDir"
+                  type="text"
+                  spellcheck="false"
+                  placeholder="/media/developer/apps/.../.config/retroarch"
+                />
+              </label>
+
+              <label>
+                Active core (emulator plugin)
+                <span class="field-hint">Used when you Play an ADF. Pick an installed core or a known Amiga core.</span>
+                <select id="core-select" aria-label="Select emulator core">
+                  <option value="">Loading cores…</option>
+                </select>
+              </label>
+
+              <label>
+                Core path on TV
+                <span class="field-hint">Full path to the <code>.so</code> (updated when you pick above)</span>
+                <input
+                  id="corePath"
+                  type="text"
+                  spellcheck="false"
+                  placeholder="…/cores/puae2021_libretro.so"
+                />
+              </label>
+
+              <div class="card-actions wrap">
+                <button type="button" id="btn-cores-refresh-settings" class="secondary">
+                  Refresh installed
+                </button>
+                <button type="button" id="btn-install-selected-core" class="primary">
+                  Install selected core
+                </button>
+                <button type="button" id="btn-amiga-defaults" class="secondary">
+                  Use default Amiga paths
+                </button>
+              </div>
+
+              <div class="core-catalog">
+                <div class="core-catalog-head">
+                  <strong>All downloadable cores</strong>
+                  <span class="field-hint">webOS armv7a (webosbrew) — ~180 emulators</span>
+                </div>
+                <div class="row gap wrap core-catalog-toolbar">
+                  <input
+                    id="core-filter"
+                    type="search"
+                    placeholder="Filter (amiga, puae, snes…)"
+                    spellcheck="false"
+                  />
+                  <button type="button" id="btn-cores-list-all" class="secondary small">
+                    List all cores
+                  </button>
+                </div>
+                <div id="core-available-list" class="core-available-list" role="list">
+                  <div class="empty muted">Click “List all cores” to load the catalog.</div>
+                </div>
+              </div>
+
+              <div class="kickstart-block">
+                <div class="settings-card-title" style="margin-top: 4px">
+                  <span class="step">✦</span>
+                  <div>
+                    <h3>Kickstart BIOS</h3>
+                    <p>
+                      Amiga needs Kickstart ROM files in the system directory (like a console BIOS).
+                      Example free dump for A500:
+                    </p>
+                  </div>
+                </div>
+                <label>
+                  Kickstart URL
+                  <span class="field-hint">Direct raw file URL (not a GitHub blob page)</span>
+                  <input
+                    id="kickstart-url"
+                    type="url"
+                    spellcheck="false"
+                    value="https://raw.githubusercontent.com/Abdess/retrobios/main/bios/Commodore/Amiga/kick34005.A500"
+                  />
+                </label>
+                <div class="card-actions wrap">
+                  <button type="button" id="btn-install-kickstart" class="primary">
+                    Install Kickstart to TV
+                  </button>
+                  <button type="button" id="btn-kickstart-example" class="secondary">
+                    Use A500 example
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <footer class="settings-footer">
+            <button type="button" id="btn-reset-defaults" class="secondary">Reset all defaults</button>
+            <div class="row gap">
+              <button type="button" id="btn-settings-cancel" class="secondary">Cancel</button>
+              <button type="button" id="btn-save" class="primary">Save settings</button>
+            </div>
+          </footer>
+        </div>
+      </div>
+
+    <main id="app" class="app-scroll">
+      <!-- Settings modal -->
+      <section class="panel actions">
+        <h2>App</h2>
+        <div class="row gap wrap">
+          <button type="button" id="btn-status" class="secondary">Refresh status</button>
+          <button type="button" data-act="launch" class="primary">Launch</button>
+          <button type="button" data-act="close">Close</button>
+          <button type="button" data-act="kill" class="danger">Force kill</button>
+          <button type="button" data-act="restart">Restart</button>
+          <span class="sep"></span>
+          <button type="button" id="btn-mouse-window" class="primary">
+            Mouse + keyboard…
+          </button>
+          <button type="button" id="btn-remote-window" class="primary">
+            Volume…
+          </button>
+        </div>
+      </section>
+
+      <section class="panel game-sources-panel">
+        <div class="panel-head">
+          <h2>Amiga game sources</h2>
+        </div>
+        <p class="panel-hint">
+          Databases and download sites open in your browser. Only use titles you are entitled to.
+          Archive.org collections can also be browsed below for direct TV install.
+        </p>
+        <div class="game-sources-groups">
+          <div class="game-sources-group">
+            <h3 class="game-sources-heading">Primary sources</h3>
+            <div id="game-sources-primary" class="game-sources-list" role="list"></div>
+          </div>
+          <div class="game-sources-group">
+            <h3 class="game-sources-heading">Abandonware / community</h3>
+            <div id="game-sources-community" class="game-sources-list" role="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel catalog-panel">
+        <div class="panel-head">
+          <h2>Install ADFs from Archive.org</h2>
+          <button type="button" id="btn-catalog-refresh" class="secondary small" title="Refresh Archive.org catalog cache">
+            Refresh catalog
+          </button>
+        </div>
+        <p class="panel-hint">
+          Search <strong>games</strong>, <strong>demos</strong>, or <strong>utilities</strong> across Archive.org —
+          or pick a site and browse. Install selected disks to the TV.
+        </p>
+
+        <div class="catalog-category-bar" role="tablist" aria-label="Catalog category">
+          <button type="button" class="cat-chip active" data-cat="all" role="tab" aria-selected="true">All</button>
+          <button type="button" class="cat-chip" data-cat="games" role="tab" aria-selected="false">Games</button>
+          <button type="button" class="cat-chip" data-cat="demos" role="tab" aria-selected="false">Demos</button>
+          <button type="button" class="cat-chip" data-cat="utils" role="tab" aria-selected="false">Utilities</button>
+        </div>
+
+        <div class="catalog-global-search">
+          <input
+            id="catalog-search"
+            type="search"
+            placeholder="Search Amiga games, demos, utilities…"
+            autocomplete="off"
+          />
+          <button type="button" id="btn-catalog-search" class="primary small">Search</button>
+          <button type="button" id="btn-catalog-prev" class="secondary small" disabled>Prev</button>
+          <button type="button" id="btn-catalog-next" class="secondary small" disabled>Next</button>
+          <button type="button" id="btn-catalog-install" class="primary small" disabled>
+            Install selected
+          </button>
+        </div>
+
+        <div class="catalog-add-site">
+          <input
+            id="catalog-site-url"
+            type="url"
+            placeholder="https://archive.org/details/… or item id"
+            autocomplete="off"
+          />
+          <input
+            id="catalog-site-label"
+            type="text"
+            placeholder="Label (optional)"
+            autocomplete="off"
+          />
+          <button type="button" id="btn-catalog-add-site" class="primary small">Add site</button>
+        </div>
+
+        <div class="catalog-steps">
+          <div class="catalog-col">
+            <div class="catalog-col-head">
+              <h3>1. Site <span class="muted" id="catalog-cat-hint"></span></h3>
+              <button type="button" id="btn-catalog-sites" class="secondary small">Reload sites</button>
+            </div>
+            <div id="catalog-sites" class="list catalog-sites" role="listbox" aria-label="Catalog sites"></div>
+          </div>
+          <div class="catalog-col catalog-adfs-col">
+            <div class="catalog-col-head">
+              <h3>2. Results</h3>
+              <span id="catalog-meta" class="catalog-meta muted"></span>
+            </div>
+            <div id="catalog-adfs" class="list catalog-adfs">
+              <div class="empty">Search above, or select a site on the left.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="split">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Amiga disks on TV</h2>
+            <div class="panel-head-actions">
+              <button type="button" id="btn-adf-add" class="primary small" title="Copy .adf files from this Mac to the TV">
+                Add…
+              </button>
+              <button type="button" id="btn-adfs" class="secondary small">Reload</button>
+            </div>
+          </div>
+          <p class="panel-hint">
+            Already on the TV. <strong>Add…</strong> uploads local files; catalog install appears above.
+          </p>
+          <div id="adf-list" class="list"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Emulator cores</h2>
+            <button type="button" id="btn-cores" class="secondary small">Reload</button>
+          </div>
+          <pre id="core-list" class="log mono"></pre>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Output</h2>
+          <button type="button" id="btn-clear" class="secondary small">Clear</button>
+        </div>
+        <pre id="log" class="log mono"></pre>
+      </section>
+    </main>
+  </body>
+</html>

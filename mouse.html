@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en" data-theme="midnight">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amiga Control</title>
+    <link rel="stylesheet" href="/src/mouse.css" />
+    <script>
+      try {
+        var t = localStorage.getItem("ra-theme");
+        if (t === "light" || t === "tokyo-night" || t === "midnight") {
+          document.documentElement.setAttribute("data-theme", t);
+        }
+      } catch (e) {}
+    </script>
+    <script type="module" src="/src/mouse.ts" defer></script>
+  </head>
+  <body>
+    <div class="control-app">
+      <header class="control-top">
+        <div class="brand-mini">
+          <img src="/src/assets/logo.png" alt="" width="28" height="28" />
+          <div>
+            <h1>Amiga control</h1>
+            <p class="sub" id="target-label">mouse + keyboard</p>
+          </div>
+        </div>
+        <div class="control-top-actions">
+          <label class="speed">
+            Speed
+            <input id="speed" type="range" min="1" max="8" value="3" />
+            <span id="speed-val">3</span>
+          </label>
+          <button type="button" id="btn-shift" class="mod" aria-pressed="false" title="Shift">
+            Shift
+          </button>
+          <button type="button" id="btn-show-cursor" class="ghost-sm" title="Show the TV pointer">
+            Cursor
+          </button>
+        </div>
+      </header>
+
+      <div class="control-body">
+        <!-- Mouse column -->
+        <section class="mouse-col" aria-label="Mouse">
+          <div
+            id="pad"
+            class="pad"
+            tabindex="0"
+            role="application"
+            aria-label="Mouse trackpad"
+          >
+            <div class="pad-crosshair"></div>
+            <div class="pad-hint" id="pad-hint">Drag to move</div>
+            <div id="pad-cursor" class="pad-cursor" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+                <path
+                  class="cursor-outline"
+                  d="M4 2 L4 18 L8.5 14.2 L12 22 L15 20.5 L11.2 13 L17 13 Z"
+                />
+                <path
+                  class="cursor-fill"
+                  d="M5.2 4.2 L5.2 15.6 L8.8 12.4 L12 19.4 L13.7 18.5 L10.3 11.2 L15.2 11.2 Z"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <div class="mouse-controls">
+            <div class="buttons">
+              <button type="button" id="btn-left" class="btn-lmb">
+                <span class="btn-title">Left</span>
+                <span class="btn-key">Space</span>
+              </button>
+              <button type="button" id="btn-right" class="btn-rmb">
+                <span class="btn-title">Right</span>
+                <span class="btn-key">RMB</span>
+              </button>
+            </div>
+
+            <div class="nudge" aria-label="Nudge">
+              <button type="button" data-nudge="0,-40">↑</button>
+              <div class="nudge-mid">
+                <button type="button" data-nudge="-40,0">←</button>
+                <button type="button" data-nudge="40,0">→</button>
+              </div>
+              <button type="button" data-nudge="0,40">↓</button>
+            </div>
+
+            <div class="keys-mini" role="group" aria-label="Quick keys">
+              <button type="button" id="btn-esc" class="btn-key-esc" title="Escape">
+                Esc
+              </button>
+              <button type="button" id="btn-enter" class="btn-key-enter" title="Return / Enter">
+                Return
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Keyboard column -->
+        <section class="kb-col" aria-label="Keyboard">
+          <div id="kb" class="kb" role="group" aria-label="Virtual keyboard"></div>
+          <div class="type-row">
+            <input
+              id="type-input"
+              type="text"
+              placeholder="Type a line → Send…"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button type="button" id="btn-send-text" class="send">Send</button>
+            <button type="button" id="btn-clear-text" class="ghost">Clear</button>
+          </div>
+        </section>
+      </div>
+
+      <pre id="status" class="status mono"></pre>
+    </div>
+  </body>
+</html>

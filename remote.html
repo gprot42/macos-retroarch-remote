@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" data-theme="midnight">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Volume</title>
+    <link rel="stylesheet" href="/src/remote.css" />
+    <script>
+      try {
+        var t = localStorage.getItem("ra-theme");
+        if (t === "light" || t === "tokyo-night" || t === "midnight") {
+          document.documentElement.setAttribute("data-theme", t);
+        }
+      } catch (e) {}
+    </script>
+    <script type="module" src="/src/remote.ts" defer></script>
+  </head>
+  <body>
+    <div class="remote-app">
+      <header class="remote-top">
+        <div class="brand-mini">
+          <img src="/src/assets/logo.png" alt="" width="28" height="28" />
+          <div>
+            <h1>TV volume</h1>
+            <p class="sub" id="target-label">webOS TV</p>
+          </div>
+        </div>
+      </header>
+
+      <p class="tip">Live TV level · + / − keys work when this window is focused.</p>
+
+      <div class="vol-display" id="vol-display" aria-live="polite">
+        <span class="vol-value" id="vol-value">—</span>
+        <span class="vol-unit" id="vol-unit">volume</span>
+        <span class="vol-muted-badge" id="vol-muted" hidden>Muted</span>
+      </div>
+
+      <div class="vol-only" role="group" aria-label="Volume">
+        <button type="button" class="rbtn vol-up" data-btn="VOLUMEUP" title="Volume up">
+          <span class="vol-icon">▲</span>
+          <span class="vol-label">Vol +</span>
+        </button>
+        <button type="button" class="rbtn vol-down" data-btn="VOLUMEDOWN" title="Volume down">
+          <span class="vol-icon">▼</span>
+          <span class="vol-label">Vol −</span>
+        </button>
+      </div>
+
+      <pre id="status" class="status mono"></pre>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,250 @@
+/* TV volume remote — themes align with main app (ra-theme) */
+:root,
+html[data-theme="midnight"] {
+  color-scheme: dark;
+  --bg: #0e1116;
+  --bg-glow: #1a2a40;
+  --surface: #0c1016;
+  --border: #2a3340;
+  --border-strong: #334155;
+  --text: #e6edf3;
+  --muted: #8b9bb0;
+  --accent: #3d9cf0;
+  --accent-soft: #9fd0ff;
+  --btn-bg: #1c2430;
+  --btn-hover: #263040;
+  --vol-up-from: #1a3a5c;
+  --vol-up-to: #122536;
+  --vol-down-from: #1c2430;
+  --vol-down-to: #141a22;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f0f3f8;
+  --bg-glow: #d4e4f7;
+  --surface: #f7f9fc;
+  --border: #c8d0dc;
+  --border-strong: #a8b4c4;
+  --text: #1a2332;
+  --muted: #5a6a80;
+  --accent: #1a7fd4;
+  --accent-soft: #0b5ea8;
+  --btn-bg: #e8edf4;
+  --btn-hover: #dde4ee;
+  --vol-up-from: #d0e8fa;
+  --vol-up-to: #b8daf5;
+  --vol-down-from: #e8edf4;
+  --vol-down-to: #dce3ec;
+}
+
+html[data-theme="tokyo-night"] {
+  color-scheme: dark;
+  --bg: #1a1b26;
+  --bg-glow: #292e42;
+  --surface: #1f2335;
+  --border: #3b4261;
+  --border-strong: #565f89;
+  --text: #c0caf5;
+  --muted: #565f89;
+  --accent: #7aa2f7;
+  --accent-soft: #89b4fa;
+  --btn-bg: #2f334d;
+  --btn-hover: #3b4261;
+  --vol-up-from: #3d59a1;
+  --vol-up-to: #2a3a70;
+  --vol-down-from: #2f334d;
+  --vol-down-to: #24283b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: "SF Pro Text", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: radial-gradient(500px 280px at 50% 0%, var(--bg-glow) 0%, var(--bg) 55%);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.remote-app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px 12px;
+  gap: 12px;
+  min-height: 0;
+}
+
+.remote-top {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.brand-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-mini img {
+  border-radius: 7px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.sub {
+  margin: 1px 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.tip {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.35;
+  flex-shrink: 0;
+}
+
+.vol-display {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 14px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  max-width: 240px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.vol-display.is-muted .vol-value {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.vol-value {
+  font-size: 2.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--accent-soft);
+  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+.vol-unit {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.vol-muted-badge {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.vol-only {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  min-height: 0;
+  max-width: 240px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.rbtn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--btn-bg);
+  color: var(--text);
+  border-radius: 16px;
+  padding: 18px 16px;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.05s, background 0.12s, border-color 0.12s;
+  min-height: 72px;
+}
+
+.rbtn:hover {
+  background: var(--btn-hover);
+  border-color: var(--border-strong);
+}
+
+.rbtn:active,
+.rbtn.pressed {
+  transform: scale(0.97);
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+
+.vol-up {
+  background: linear-gradient(180deg, var(--vol-up-from), var(--vol-up-to));
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+
+.vol-down {
+  background: linear-gradient(180deg, var(--vol-down-from), var(--vol-down-to));
+}
+
+.vol-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.vol-label {
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.status {
+  margin: 0;
+  flex-shrink: 0;
+  min-height: 0;
+  max-height: 2.8em;
+  padding: 6px 8px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  white-space: pre-wrap;
+  overflow: hidden;
+}
+
+.mono {
+  font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+}
