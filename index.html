@@ -13,12 +13,14 @@
           document.documentElement.setAttribute("data-theme", t);
         }
       } catch (e) {}
+      // Show disclaimer unless already accepted (must match DISCLAIMER_KEY in main.ts)
+      window.__RA_DISCLAIMER_KEY__ = "ra-disclaimer-accepted-v2";
     </script>
     <script type="module" src="/src/main.ts" defer></script>
   </head>
   <body>
-    <!-- First-run legal disclaimer (must accept once) -->
-    <div id="disclaimer-overlay" class="disclaimer-overlay" hidden>
+    <!-- First-run legal disclaimer (must accept once; revealed immediately below if needed) -->
+    <div id="disclaimer-overlay" class="disclaimer-overlay" hidden aria-hidden="true">
       <div
         class="disclaimer-modal"
         role="alertdialog"
@@ -27,40 +29,56 @@
         aria-describedby="disclaimer-body"
       >
         <header class="disclaimer-header">
-          <h2 id="disclaimer-title">Disclaimer</h2>
+          <div class="disclaimer-title-row">
+            <span class="disclaimer-icon" aria-hidden="true">⚠</span>
+            <h2 id="disclaimer-title">Legal disclaimer</h2>
+          </div>
+          <p class="disclaimer-lead">
+            Before using <strong>RetroArch Control</strong>, confirm each point below.
+          </p>
         </header>
         <div class="disclaimer-body" id="disclaimer-body">
-          <p class="disclaimer-lead">
-            Before using <strong>RetroArch Control</strong>, please confirm the following.
-          </p>
           <ul class="disclaimer-list">
             <li>
-              You have <strong>purchased or otherwise legally obtained</strong> any Amiga ROMs,
-              disk images (<code>.adf</code>), Kickstart BIOS files, and games you install or use
-              with this application.
+              <span class="disclaimer-item-title">You own your media</span>
+              <span class="disclaimer-item-text">
+                You have purchased or otherwise legally obtained any Amiga ROMs, disk images
+                (<code>.adf</code>), Kickstart BIOS files, and games you install or use with this app.
+              </span>
             </li>
             <li>
-              You will only download and use software you are
-              <strong>legally entitled</strong> to use in your jurisdiction.
+              <span class="disclaimer-item-title">Legal downloads only</span>
+              <span class="disclaimer-item-text">
+                You will only download and use software you are legally entitled to use in your
+                jurisdiction.
+              </span>
             </li>
             <li>
-              <strong>Copyright and abandonware laws differ by country.</strong> What is allowed
-              where you live may not be allowed elsewhere. You must understand and follow the laws
-              that apply to you.
+              <span class="disclaimer-item-title">Laws vary by country</span>
+              <span class="disclaimer-item-text">
+                Copyright and abandonware rules differ worldwide. What is allowed where you live may
+                not be allowed elsewhere — follow the laws that apply to you.
+              </span>
             </li>
             <li>
-              Linked third-party game sites are provided for convenience only. This app does
-              <strong>not</strong> host or distribute copyrighted game files.
+              <span class="disclaimer-item-title">Third-party links only</span>
+              <span class="disclaimer-item-text">
+                Linked game sites are for convenience. This app does not host or distribute
+                copyrighted game files.
+              </span>
             </li>
             <li>
-              <strong>Your actions are your own.</strong> You are solely responsible for compliance
-              with copyright and local law. The authors of this tool accept no liability for misuse.
+              <span class="disclaimer-item-title">You are responsible</span>
+              <span class="disclaimer-item-text">
+                Your actions are your own. You alone ensure copyright and local-law compliance. The
+                authors accept no liability for misuse.
+              </span>
             </li>
           </ul>
-          <p class="disclaimer-foot muted">
-            This software is a local utility for controlling RetroArch on your TV. It is not
-            affiliated with Commodore, Cloanto, Lemon Amiga, Internet Archive, Hall of Light, or any
-            listed third-party site.
+          <p class="disclaimer-foot">
+            This is a local utility for controlling RetroArch on your TV. It is not affiliated with
+            Commodore, Cloanto, Lemon Amiga, Internet Archive, Hall of Light, or any listed third-party
+            site.
           </p>
         </div>
         <footer class="disclaimer-footer">
@@ -70,6 +88,22 @@
         </footer>
       </div>
     </div>
+    <script>
+      // Reveal disclaimer before the module bundle loads (no flash of main UI).
+      (function () {
+        try {
+          var key = window.__RA_DISCLAIMER_KEY__ || "ra-disclaimer-accepted-v2";
+          if (localStorage.getItem(key) === "1") return;
+        } catch (e) {
+          /* show if storage blocked */
+        }
+        var el = document.getElementById("disclaimer-overlay");
+        if (el) {
+          el.removeAttribute("hidden");
+          el.setAttribute("aria-hidden", "false");
+        }
+      })();
+    </script>
 
     <!-- Pinned app bar (outside #app so scroll never moves it) -->
     <header class="top" id="app-bar">

@@ -54,8 +54,8 @@ function setBusy(busy: boolean) {
 }
 
 // ── First-run disclaimer ─────────────────────────────────────────────────
-
-const DISCLAIMER_KEY = "ra-disclaimer-accepted";
+// Bump the key suffix when the legal text changes so users re-acknowledge.
+const DISCLAIMER_KEY = "ra-disclaimer-accepted-v2";
 /** Open Settings after the user accepts the first-run disclaimer (e.g. missing SSH key). */
 let openSettingsAfterDisclaimer = false;
 
@@ -70,8 +70,17 @@ function hasAcceptedDisclaimer(): boolean {
 function showDisclaimer(show: boolean) {
   const el = document.getElementById("disclaimer-overlay");
   if (!el) return;
-  if (show) el.removeAttribute("hidden");
-  else el.setAttribute("hidden", "");
+  if (show) {
+    el.removeAttribute("hidden");
+    el.setAttribute("aria-hidden", "false");
+    // Focus accept so keyboard / VoiceOver users can act immediately
+    requestAnimationFrame(() => {
+      document.getElementById("btn-disclaimer-accept")?.focus();
+    });
+  } else {
+    el.setAttribute("hidden", "");
+    el.setAttribute("aria-hidden", "true");
+  }
 }
 
 function acceptDisclaimer() {
@@ -122,31 +131,31 @@ const GAME_SOURCE_SITES: GameSourceSite[] = [
     group: "primary",
   },
   {
-    id: "abandonia",
-    name: "Abandonia",
-    desc: "Dedicated to abandonware games, including Amiga titles.",
-    url: "https://www.abandonia.com/",
+    id: "myabandonware",
+    name: "My Abandonware",
+    desc: "Large abandonware archive with a dedicated Amiga catalog.",
+    url: "https://www.myabandonware.com/browse/platform/amiga/",
     group: "community",
   },
   {
-    id: "romunited",
-    name: "RomUnited",
-    desc: "Large ROM collection database.",
-    url: "https://www.romunited.com/",
+    id: "romulation",
+    name: "Romulation",
+    desc: "Retro console and computer ROM downloads.",
+    url: "https://www.romulation.org/",
     group: "community",
   },
   {
-    id: "romsite",
-    name: "RomSite",
-    desc: "Various ROM download sites and indexes.",
-    url: "https://www.romsite.net/",
+    id: "vimm",
+    name: "Vimm's Lair",
+    desc: "Classic console ROM preservation site.",
+    url: "https://vimm.net/",
     group: "community",
   },
   {
-    id: "holy-frigin-retro",
-    name: "Holy-Frigin-Retro",
-    desc: "Retro game ROM downloads.",
-    url: "https://holy-frigin-retro.com/",
+    id: "old-games",
+    name: "Old-Games.com",
+    desc: "10,000+ classic PC and retro games to download.",
+    url: "https://www.old-games.com/",
     group: "community",
   },
 ];
@@ -1638,9 +1647,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   // Game source link cards
   renderGameSources();
 
-  // First-run disclaimer (blocks until accepted)
+  // First-run disclaimer (blocks until accepted; may already be visible via inline script)
   const disclaimerOverlay = document.getElementById("disclaimer-overlay");
-  $("btn-disclaimer-accept").addEventListener("click", () => acceptDisclaimer());
+  const acceptBtn = document.getElementById("btn-disclaimer-accept");
+  acceptBtn?.addEventListener("click", () => acceptDisclaimer());
   // Do not dismiss by clicking backdrop or Escape — must accept explicitly
   disclaimerOverlay
     ?.querySelector(".disclaimer-modal")
@@ -1649,6 +1659,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   if (!hasAcceptedDisclaimer()) {
     showDisclaimer(true);
     log("Please accept the disclaimer to continue.");
+  } else {
+    showDisclaimer(false);
   }
 
   // Open settings first if key/script missing
