@@ -1,7 +1,7 @@
 [package]
 name = "retroarch-control"
 version = "0.1.0"
-description = "A Tauri App"
+description = "RetroArch Remote — control RetroArch on a webOS TV"
 authors = ["you"]
 edition = "2021"
 

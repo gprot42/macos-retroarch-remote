@@ -1,4 +1,4 @@
-# RetroArch Control (macOS)
+# RetroArch Remote (macOS)
 
 Tauri 2 + Bun + TypeScript desktop app to **control and configure RetroArch on a rooted webOS LG TV** over SSH.
 
@@ -11,7 +11,7 @@ RetroArch/webos/control-retroarch.sh
 ## Features (v0.1)
 
 - Connection settings (host, user, SSH key, script path)
-- App: **Launch / Close / Kill / Restart**
+- App: **Launch / Quit / Restart**
 - List **Amiga .adf** disks → **Play** / **Remove**
 - **Add…** file picker to upload local `.adf` images to the TV
 - **Install ADFs from Archive.org**: classic games (A–Z), PD, demoscene → browse/search → install

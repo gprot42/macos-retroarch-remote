@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="/src/styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RetroArch Control</title>
+    <title>RetroArch Remote</title>
     <script>
       // Apply saved theme before paint to avoid flash
       try {
@@ -34,7 +34,7 @@
             <h2 id="disclaimer-title">Legal disclaimer</h2>
           </div>
           <p class="disclaimer-lead">
-            Before using <strong>RetroArch Control</strong>, confirm each point below.
+            Before using <strong>RetroArch Remote</strong>, confirm each point below.
           </p>
         </header>
         <div class="disclaimer-body" id="disclaimer-body">
@@ -110,13 +110,94 @@
       <div class="brand">
         <img src="/src/assets/logo.png" alt="" class="app-logo" width="48" height="48" />
         <div>
-          <h1>RetroArch Control</h1>
-          <p class="sub">webOS TV · SSH · PUAE / cores / disks</p>
+          <h1>RetroArch Remote</h1>
+          <p class="sub">Control RetroArch on your LG TV · Amiga disks &amp; engines</p>
         </div>
       </div>
       <div class="top-actions">
-        <button type="button" id="btn-settings" class="secondary">Settings</button>
-        <div class="conn-badge" id="conn-badge">disconnected</div>
+        <button
+          type="button"
+          id="btn-settings"
+          class="settings-badge"
+          title="Settings"
+          aria-label="Settings"
+          aria-pressed="false"
+        >
+          <svg
+            class="settings-badge-icon"
+            viewBox="0 0 24 24"
+            width="22"
+            height="22"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <!-- Gear -->
+            <path
+              fill="currentColor"
+              d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.48a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.52a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.32.6.22l2.39-.96c.5.4 1.05.72 1.63.94l.36 2.54c.05.24.26.42.49.42h3.8c.24 0 .44-.18.49-.42l.36-2.54c.58-.23 1.12-.54 1.63-.94l2.39.96c.23.1.48 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"
+            />
+          </svg>
+          <span class="settings-badge-tip" role="tooltip">Settings</span>
+        </button>
+        <button
+          type="button"
+          id="btn-fix-network"
+          class="net-badge"
+          title="Fix network"
+          aria-label="Network status — Fix network"
+          data-tooltip="Fix network"
+        >
+          <svg
+            class="net-badge-icon"
+            viewBox="0 0 24 24"
+            width="22"
+            height="22"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <!-- Simple wifi / network arcs -->
+            <path
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              d="M4.5 9.5c4.2-4 10.8-4 15 0"
+            />
+            <path
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              d="M7.5 12.8c2.6-2.4 6.4-2.4 9 0"
+            />
+            <path
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              d="M10.2 16c1.1-1 2.5-1 3.6 0"
+            />
+            <circle cx="12" cy="19" r="1.4" fill="currentColor" />
+          </svg>
+          <span class="net-badge-tip" role="tooltip">Fix network</span>
+        </button>
+        <button
+          type="button"
+          id="pad-badge"
+          class="pad-badge"
+          title="Pair Gamepad"
+          aria-label="Pair Gamepad"
+        >
+          <img
+            src="/src/assets/gamepad-icon.png"
+            alt=""
+            class="pad-badge-icon"
+            width="28"
+            height="28"
+            draggable="false"
+          />
+          <span class="pad-badge-tip" role="tooltip">Pair Gamepad</span>
+        </button>
       </div>
     </header>
 
@@ -125,240 +206,519 @@
           <header class="settings-header">
             <div>
               <h2 id="settings-title">Settings</h2>
-              <p class="settings-lead">Configure SSH to the TV and where Amiga files live on device.</p>
+              <p class="settings-lead" id="settings-lead">
+                Configure SSH to the TV and where Amiga files live on device.
+              </p>
             </div>
             <button type="button" id="btn-settings-close" class="secondary" aria-label="Close settings">
               ✕
             </button>
           </header>
 
-          <div class="settings-body">
-            <!-- Appearance -->
-            <section class="settings-card">
-              <div class="settings-card-title">
-                <span class="step">✦</span>
-                <div>
-                  <h3>Appearance</h3>
-                  <p>Color theme for this app (also used by mouse, volume, and keyboard windows).</p>
-                </div>
-              </div>
-              <label class="theme-field">
-                Theme
-                <select id="theme-select" aria-label="Color theme">
-                  <option value="midnight">Midnight</option>
-                  <option value="light">Light</option>
-                  <option value="tokyo-night">Tokyo Night</option>
-                </select>
-              </label>
-            </section>
+          <div class="settings-main">
+            <nav class="settings-nav" role="tablist" aria-label="Settings sections">
+              <button
+                type="button"
+                class="settings-nav-item active"
+                data-settings-section="appearance"
+                role="tab"
+                aria-selected="true"
+                aria-controls="settings-sec-appearance"
+                id="settings-tab-appearance"
+              >
+                <span class="settings-nav-icon" aria-hidden="true">✦</span>
+                Appearance
+              </button>
+              <button
+                type="button"
+                class="settings-nav-item"
+                data-settings-section="connection"
+                role="tab"
+                aria-selected="false"
+                aria-controls="settings-sec-connection"
+                id="settings-tab-connection"
+              >
+                <span class="settings-nav-icon" aria-hidden="true">1</span>
+                Connection
+              </button>
+              <button
+                type="button"
+                class="settings-nav-item"
+                data-settings-section="amiga"
+                role="tab"
+                aria-selected="false"
+                aria-controls="settings-sec-amiga"
+                id="settings-tab-amiga"
+              >
+                <span class="settings-nav-icon" aria-hidden="true">2</span>
+                Amiga &amp; engines
+              </button>
+              <button
+                type="button"
+                class="settings-nav-item"
+                data-settings-section="kickstart"
+                role="tab"
+                aria-selected="false"
+                aria-controls="settings-sec-kickstart"
+                id="settings-tab-kickstart"
+              >
+                <span class="settings-nav-icon" aria-hidden="true">3</span>
+                Amiga KickStart
+              </button>
+              <button
+                type="button"
+                class="settings-nav-item"
+                data-settings-section="controller"
+                role="tab"
+                aria-selected="false"
+                aria-controls="settings-sec-controller"
+                id="settings-tab-controller"
+              >
+                <span class="settings-nav-icon" aria-hidden="true">4</span>
+                Controller
+              </button>
+            </nav>
 
-            <!-- Card 1: SSH -->
-            <section class="settings-card">
-              <div class="settings-card-title">
-                <span class="step">1</span>
-                <div>
-                  <h3>SSH connection</h3>
-                  <p>How this Mac reaches the LG TV. Required for every command.</p>
-                </div>
-              </div>
-
-              <div class="grid-host">
-                <label>
-                  Host / IP
-                  <input id="host" type="text" spellcheck="false" placeholder="192.168.0.79" />
-                </label>
-                <label>
-                  User
-                  <input id="user" type="text" spellcheck="false" placeholder="root" />
-                </label>
-                <label>
-                  Port
-                  <input id="port" type="number" min="1" max="65535" placeholder="22" />
-                </label>
-              </div>
-
-              <label class="key-field">
-                SSH private key <span class="where">on this Mac</span>
-                <span class="field-hint" id="sshKey-hint">
-                  Usual project key:
-                  <code id="sshKey-default">~/.ssh/webos_deploy</code>
-                </span>
-                <div class="path-row">
-                  <input
-                    id="sshKey"
-                    type="text"
-                    spellcheck="false"
-                    placeholder="~/.ssh/webos_deploy"
-                    aria-describedby="sshKey-resolved sshKey-status"
-                  />
-                  <button type="button" id="btn-browse-key" class="secondary">Browse…</button>
-                  <button type="button" id="btn-reveal-key" class="secondary">Show in Finder</button>
-                  <button type="button" id="btn-use-default-key" class="secondary">Use default</button>
-                </div>
-                <span class="path-resolved mono" id="sshKey-resolved"></span>
-                <span class="field-status" id="sshKey-status"></span>
-              </label>
-
-              <label>
-                Control script <span class="where">on this Mac</span>
-                <span class="field-hint">Shell helper that talks to the TV</span>
-                <div class="path-row">
-                  <input
-                    id="scriptPath"
-                    type="text"
-                    spellcheck="false"
-                    placeholder="~/src/RetroArch/webos/control-retroarch.sh"
-                  />
-                  <button type="button" id="btn-browse-script" class="secondary">Browse…</button>
-                </div>
-                <span class="field-status" id="scriptPath-status"></span>
-              </label>
-
-              <label>
-                Extra SSH options <span class="opt">(optional)</span>
-                <input
-                  id="sshExtra"
-                  type="text"
-                  spellcheck="false"
-                  placeholder="e.g. -o ProxyJump=bastion"
-                />
-              </label>
-
-              <div class="card-actions ssh-test-row">
-                <button type="button" id="btn-test-ssh" class="secondary">Test SSH</button>
-                <span class="field-status" id="ssh-test-status" aria-live="polite"></span>
-              </div>
-            </section>
-
-            <!-- Card 2: Amiga on TV -->
-            <section class="settings-card">
-              <div class="settings-card-title">
-                <span class="step">2</span>
-                <div>
-                  <h3>Amiga paths on the TV</h3>
-                  <p>
-                    Folders <strong>on the LG TV filesystem</strong> — not on your Mac.
-                    <code>.adf</code> = disk images · Kickstart = BIOS ROMs.
-                  </p>
-                </div>
-              </div>
-
-              <label>
-                ADF disks directory
-                <span class="field-hint">Floppy disk images (<code>.adf</code>)</span>
-                <input
-                  id="disksDir"
-                  type="text"
-                  spellcheck="false"
-                  placeholder="/media/developer/apps/.../disks/amiga"
-                />
-              </label>
-
-              <label>
-                Kickstart / system directory
-                <span class="field-hint">BIOS ROMs (<code>kick34005.A500</code>, etc.)</span>
-                <input
-                  id="systemDir"
-                  type="text"
-                  spellcheck="false"
-                  placeholder="/media/developer/apps/.../system"
-                />
-              </label>
-
-              <label>
-                RetroArch config root
-                <span class="field-hint">Parent of disks/, system/, cores/</span>
-                <input
-                  id="raDir"
-                  type="text"
-                  spellcheck="false"
-                  placeholder="/media/developer/apps/.../.config/retroarch"
-                />
-              </label>
-
-              <label>
-                Active core (emulator plugin)
-                <span class="field-hint">Used when you Play an ADF. Pick an installed core or a known Amiga core.</span>
-                <select id="core-select" aria-label="Select emulator core">
-                  <option value="">Loading cores…</option>
-                </select>
-              </label>
-
-              <label>
-                Core path on TV
-                <span class="field-hint">Full path to the <code>.so</code> (updated when you pick above)</span>
-                <input
-                  id="corePath"
-                  type="text"
-                  spellcheck="false"
-                  placeholder="…/cores/puae2021_libretro.so"
-                />
-              </label>
-
-              <div class="card-actions wrap">
-                <button type="button" id="btn-cores-refresh-settings" class="secondary">
-                  Refresh installed
-                </button>
-                <button type="button" id="btn-install-selected-core" class="primary">
-                  Install selected core
-                </button>
-                <button type="button" id="btn-amiga-defaults" class="secondary">
-                  Use default Amiga paths
-                </button>
-              </div>
-
-              <div class="core-catalog">
-                <div class="core-catalog-head">
-                  <strong>All downloadable cores</strong>
-                  <span class="field-hint">webOS armv7a (webosbrew) — ~180 emulators</span>
-                </div>
-                <div class="row gap wrap core-catalog-toolbar">
-                  <input
-                    id="core-filter"
-                    type="search"
-                    placeholder="Filter (amiga, puae, snes…)"
-                    spellcheck="false"
-                  />
-                  <button type="button" id="btn-cores-list-all" class="secondary small">
-                    List all cores
-                  </button>
-                </div>
-                <div id="core-available-list" class="core-available-list" role="list">
-                  <div class="empty muted">Click “List all cores” to load the catalog.</div>
-                </div>
-              </div>
-
-              <div class="kickstart-block">
-                <div class="settings-card-title" style="margin-top: 4px">
+            <div class="settings-body">
+              <!-- Appearance -->
+              <section
+                class="settings-card settings-section active"
+                id="settings-sec-appearance"
+                data-settings-panel="appearance"
+                role="tabpanel"
+                aria-labelledby="settings-tab-appearance"
+              >
+                <div class="settings-card-title">
                   <span class="step">✦</span>
                   <div>
-                    <h3>Kickstart BIOS</h3>
+                    <h3>Appearance</h3>
+                    <p>Color theme for this app (also used by mouse, volume, and keyboard windows).</p>
+                  </div>
+                </div>
+                <div class="theme-field">
+                  <span class="theme-field-label" id="theme-label">Theme</span>
+                  <div
+                    class="theme-btn-row"
+                    role="radiogroup"
+                    aria-labelledby="theme-label"
+                  >
+                    <button
+                      type="button"
+                      class="theme-btn active"
+                      data-theme="midnight"
+                      role="radio"
+                      aria-checked="true"
+                    >
+                      <span class="theme-swatch theme-swatch-midnight" aria-hidden="true"></span>
+                      Midnight
+                    </button>
+                    <button
+                      type="button"
+                      class="theme-btn"
+                      data-theme="light"
+                      role="radio"
+                      aria-checked="false"
+                    >
+                      <span class="theme-swatch theme-swatch-light" aria-hidden="true"></span>
+                      Light
+                    </button>
+                    <button
+                      type="button"
+                      class="theme-btn"
+                      data-theme="tokyo-night"
+                      role="radio"
+                      aria-checked="false"
+                    >
+                      <span class="theme-swatch theme-swatch-tokyo" aria-hidden="true"></span>
+                      Tokyo Night
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Connection / SSH -->
+              <section
+                class="settings-card settings-section"
+                id="settings-sec-connection"
+                data-settings-panel="connection"
+                role="tabpanel"
+                aria-labelledby="settings-tab-connection"
+                hidden
+              >
+                <div class="settings-card-title">
+                  <span class="step">1</span>
+                  <div>
+                    <h3>SSH connection</h3>
+                    <p>How this Mac reaches the LG TV. Required for every command.</p>
+                  </div>
+                </div>
+
+                <div class="grid-host">
+                  <label>
+                    Host / IP
+                    <input id="host" type="text" spellcheck="false" placeholder="192.168.0.79" />
+                  </label>
+                  <label>
+                    User
+                    <input id="user" type="text" spellcheck="false" placeholder="root" />
+                  </label>
+                  <label>
+                    Port
+                    <input id="port" type="number" min="1" max="65535" placeholder="22" />
+                  </label>
+                </div>
+
+                <label class="key-field">
+                  SSH private key <span class="where">on this Mac</span>
+                  <span class="field-hint" id="sshKey-hint">
+                    Usual project key:
+                    <code id="sshKey-default">~/.ssh/webos_deploy</code>
+                  </span>
+                  <div class="path-row">
+                    <input
+                      id="sshKey"
+                      type="text"
+                      spellcheck="false"
+                      placeholder="~/.ssh/webos_deploy"
+                      aria-describedby="sshKey-resolved sshKey-status"
+                    />
+                    <button type="button" id="btn-browse-key" class="secondary">Browse…</button>
+                    <button type="button" id="btn-reveal-key" class="secondary">Show in Finder</button>
+                    <button type="button" id="btn-use-default-key" class="secondary">Use default</button>
+                  </div>
+                  <span class="path-resolved mono" id="sshKey-resolved"></span>
+                  <span class="field-status" id="sshKey-status"></span>
+                </label>
+
+                <label>
+                  Control script <span class="where">on this Mac</span>
+                  <span class="field-hint">Shell helper that talks to the TV</span>
+                  <div class="path-row">
+                    <input
+                      id="scriptPath"
+                      type="text"
+                      spellcheck="false"
+                      placeholder="~/src/public/RetroArch/webos/control-retroarch.sh"
+                    />
+                    <button type="button" id="btn-browse-script" class="secondary">Browse…</button>
+                  </div>
+                  <span class="field-status" id="scriptPath-status"></span>
+                </label>
+
+                <label>
+                  Extra SSH options <span class="opt">(optional)</span>
+                  <input
+                    id="sshExtra"
+                    type="text"
+                    spellcheck="false"
+                    placeholder="e.g. -o ProxyJump=bastion"
+                  />
+                </label>
+
+                <div class="card-actions ssh-test-row wrap">
+                  <button type="button" id="btn-test-ssh" class="secondary">Test SSH</button>
+                  <button
+                    type="button"
+                    id="btn-fix-network-settings"
+                    class="secondary"
+                    title="Rediscover TV, flush stale ARP, optional Wi‑Fi reset"
+                  >
+                    Fix network
+                  </button>
+                  <span class="field-status" id="ssh-test-status" aria-live="polite"></span>
+                </div>
+                <p class="field-hint" id="network-repair-hint">
+                  If you see “Operation timed out” / “No route to host”, the TV is offline or
+                  Wi‑Fi-isolated from this Mac. <strong>Fix network</strong> rediscovers the TV
+                  via mDNS, clears a stale ARP entry (may ask for your password), and can restart
+                  Mac Wi‑Fi.
+                </p>
+
+                <div class="settings-divider" role="separator"></div>
+                <h4 class="settings-subhead">TV while playing</h4>
+                <label class="check-row screensaver-opt">
+                  <input type="checkbox" id="opt-disable-screensaver" />
+                  <span>
+                    <strong>Disable TV screensaver</strong>
+                    while this app is open
+                    <span class="field-hint">
+                      Turns off LG webOS screensaver / no-signal art while you use RetroArch Remote.
+                      Restores your previous setting when you quit the app.
+                    </span>
+                  </span>
+                </label>
+                <p class="field-status" id="screensaver-status" aria-live="polite"></p>
+              </section>
+
+              <!-- Amiga paths + cores -->
+              <section
+                class="settings-card settings-section"
+                id="settings-sec-amiga"
+                data-settings-panel="amiga"
+                role="tabpanel"
+                aria-labelledby="settings-tab-amiga"
+                hidden
+              >
+                <div class="settings-card-title">
+                  <span class="step">2</span>
+                  <div>
+                    <h3>Amiga paths &amp; engines</h3>
                     <p>
-                      Amiga needs Kickstart ROM files in the system directory (like a console BIOS).
-                      Example free dump for A500:
+                      Folders <strong>on the LG TV filesystem</strong> — not on your Mac.
+                      <code>.adf</code> = disk images · engines = emulators (libretro cores).
                     </p>
                   </div>
                 </div>
+
                 <label>
-                  Kickstart URL
-                  <span class="field-hint">Direct raw file URL (not a GitHub blob page)</span>
+                  ADF disks directory
+                  <span class="field-hint">Floppy disk images (<code>.adf</code>)</span>
                   <input
-                    id="kickstart-url"
-                    type="url"
+                    id="disksDir"
+                    type="text"
                     spellcheck="false"
-                    value="https://raw.githubusercontent.com/Abdess/retrobios/main/bios/Commodore/Amiga/kick34005.A500"
+                    placeholder="/media/developer/apps/.../disks/amiga"
                   />
                 </label>
+
+                <label>
+                  Kickstart / system directory
+                  <span class="field-hint">BIOS ROMs (<code>kick34005.A500</code>, etc.)</span>
+                  <input
+                    id="systemDir"
+                    type="text"
+                    spellcheck="false"
+                    placeholder="/media/developer/apps/.../system"
+                  />
+                </label>
+
+                <label>
+                  RetroArch config root
+                  <span class="field-hint">Parent of disks/, system/, cores/</span>
+                  <input
+                    id="raDir"
+                    type="text"
+                    spellcheck="false"
+                    placeholder="/media/developer/apps/.../.config/retroarch"
+                  />
+                </label>
+
+                <label>
+                  Amiga core (for Play ADF)
+                  <span class="field-hint">
+                    Used only when you <strong>Play</strong> an Amiga disk.
+                    Pick a PUAE / Amiberry core — not SNES, GBA, etc.
+                  </span>
+                  <select id="core-select" aria-label="Amiga emulator core for ADF play">
+                    <option value="">Loading cores…</option>
+                  </select>
+                </label>
+
+                <label>
+                  Amiga core path on TV
+                  <span class="field-hint">Full path to the <code>.so</code> (updated when you pick above)</span>
+                  <input
+                    id="corePath"
+                    type="text"
+                    spellcheck="false"
+                    placeholder="…/cores/puae2021_libretro.so"
+                  />
+                </label>
+
                 <div class="card-actions wrap">
-                  <button type="button" id="btn-install-kickstart" class="primary">
-                    Install Kickstart to TV
+                  <button type="button" id="btn-cores-refresh-settings" class="secondary">
+                    Refresh engines
                   </button>
-                  <button type="button" id="btn-kickstart-example" class="secondary">
-                    Use A500 example
+                  <button type="button" id="btn-install-selected-core" class="primary">
+                    Install selected engine
+                  </button>
+                  <button type="button" id="btn-amiga-defaults" class="secondary">
+                    Use default Amiga paths
                   </button>
                 </div>
-              </div>
-            </section>
+
+                <div class="core-catalog engine-catalog">
+                  <div class="core-catalog-head">
+                    <strong>Downloadable engines</strong>
+                    <span class="field-hint">
+                      Each <em>engine</em> is a libretro core for a console. Amiga engines power
+                      <strong>Play ADF</strong>; NES, SNES, Genesis, PS1, N64 and others run in
+                      RetroArch on the TV.
+                    </span>
+                  </div>
+                  <div
+                    id="engine-scope-bar"
+                    class="core-scope-bar engine-scope-bar"
+                    role="tablist"
+                    aria-label="Engine system filter"
+                  >
+                    <!-- Filled by renderEngineScopeChips() with console logos -->
+                  </div>
+                  <div class="row gap wrap core-catalog-toolbar">
+                    <input
+                      id="core-filter"
+                      type="search"
+                      placeholder="Filter engines (puae, snes9x…)"
+                      spellcheck="false"
+                    />
+                    <button type="button" id="btn-cores-list-all" class="secondary small">
+                      List engines
+                    </button>
+                  </div>
+                  <div id="core-available-list" class="core-available-list engine-grid" role="list">
+                    <div class="empty muted">Pick a console, then List engines.</div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Kickstart BIOS -->
+              <section
+                class="settings-card settings-section"
+                id="settings-sec-kickstart"
+                data-settings-panel="kickstart"
+                role="tabpanel"
+                aria-labelledby="settings-tab-kickstart"
+                hidden
+              >
+                <div class="settings-card-title">
+                  <span class="step">3</span>
+                  <div>
+                    <h3>Amiga KickStart</h3>
+                    <p>
+                      Different Amiga models need different KickStart ROMs (like a console BIOS).
+                      Select what you need, then install to the TV.
+                    </p>
+                  </div>
+                </div>
+                <div
+                  id="kickstart-status"
+                  class="kickstart-status field-status"
+                  role="status"
+                  aria-live="polite"
+                >
+                  Checking TV for Kickstart…
+                </div>
+                <ul id="kickstart-on-tv" class="kickstart-file-list" hidden></ul>
+
+                <div class="kickstart-picker-head">
+                  <strong>Choose Kickstart ROMs</strong>
+                  <div class="row gap wrap">
+                    <button type="button" id="btn-kickstart-select-rec" class="secondary small">
+                      Select recommended
+                    </button>
+                    <button type="button" id="btn-kickstart-select-none" class="secondary small">
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                <div
+                  id="kickstart-picker"
+                  class="kickstart-picker"
+                  role="group"
+                  aria-label="Kickstart ROM choices"
+                ></div>
+
+                <div class="card-actions wrap kickstart-actions">
+                  <button type="button" id="btn-install-kickstart" class="primary">
+                    Install selected to TV
+                  </button>
+                  <button type="button" id="btn-kickstart-refresh" class="secondary">
+                    Check TV
+                  </button>
+                </div>
+
+                <details class="more-block kickstart-advanced">
+                  <summary class="more-summary">
+                    Custom Kickstart URL
+                    <span class="more-summary-hint">advanced</span>
+                  </summary>
+                  <label>
+                    Direct raw file URL
+                    <span class="field-hint">Optional — use if your ROM is not in the list above</span>
+                    <input
+                      id="kickstart-url"
+                      type="url"
+                      spellcheck="false"
+                      placeholder="https://…/kick34005.A500"
+                    />
+                  </label>
+                </details>
+              </section>
+
+              <!-- Controller mapping -->
+              <section
+                class="settings-card settings-section settings-card-pad-map"
+                id="settings-sec-controller"
+                data-settings-panel="controller"
+                role="tabpanel"
+                aria-labelledby="settings-tab-controller"
+                hidden
+              >
+                <div class="settings-card-title">
+                  <span class="step">4</span>
+                  <div>
+                    <h3>Controller mapping</h3>
+                    <p>
+                      Map a spare gamepad button to a mouse click on the TV.
+                      Useful for Amiga games that need a mouse button while you play with a pad.
+                    </p>
+                  </div>
+                </div>
+
+                <label class="pad-action-field">
+                  Map button to
+                  <span class="field-hint">What the chosen pad button should inject</span>
+                  <select id="pad-map-action" aria-label="Action to map from controller">
+                    <option value="lmb" selected>Left mouse button (recommended)</option>
+                    <option value="rmb">Right mouse button</option>
+                    <option value="mmb">Middle mouse button</option>
+                  </select>
+                </label>
+
+                <label class="pad-action-field">
+                  Using controller layout
+                  <span class="field-hint">Diagram only — pick the button you rarely use</span>
+                </label>
+                <div class="pad-map-style-bar" role="tablist" aria-label="Gamepad diagram style">
+                  <!-- Chips filled by main.ts -->
+                </div>
+                <div class="pad-map-layout">
+                  <div class="pad-map-diagram" id="pad-map-diagram" aria-label="Gamepad button map">
+                    <!-- SVG filled by main.ts -->
+                  </div>
+                  <div class="pad-map-side">
+                    <div class="pad-map-current" id="pad-map-current">
+                      Left mouse ← L3 (left stick click)
+                    </div>
+                    <div
+                      class="pad-map-choices"
+                      id="pad-map-choices"
+                      role="group"
+                      aria-label="Controller button to map"
+                    ></div>
+                    <div class="card-actions wrap">
+                      <button type="button" id="btn-pad-mouse-apply" class="primary">
+                        Apply on TV
+                      </button>
+                      <button type="button" id="btn-pad-mouse-stop" class="secondary">
+                        Disable
+                      </button>
+                      <button type="button" id="btn-detect-gamepad" class="secondary">
+                        Detect gamepad
+                      </button>
+                    </div>
+                    <div
+                      id="pad-map-status"
+                      class="kickstart-status field-status"
+                      role="status"
+                      aria-live="polite"
+                    >
+                      Not applied yet
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
           </div>
 
           <footer class="settings-footer">
@@ -372,58 +732,205 @@
       </div>
 
     <main id="app" class="app-scroll">
-      <!-- Settings modal -->
-      <section class="panel actions">
-        <h2>App</h2>
-        <div class="row gap wrap">
-          <button type="button" id="btn-status" class="secondary">Refresh status</button>
-          <button type="button" data-act="launch" class="primary">Launch</button>
-          <button type="button" data-act="close">Close</button>
-          <button type="button" data-act="kill" class="danger">Force kill</button>
-          <button type="button" data-act="restart">Restart</button>
-          <span class="sep"></span>
-          <button type="button" id="btn-mouse-window" class="primary">
-            Mouse + keyboard…
-          </button>
-          <button type="button" id="btn-remote-window" class="primary">
-            Volume…
-          </button>
-        </div>
-      </section>
-
-      <section class="panel game-sources-panel">
+      <!-- 1. Control RetroArch on the TV -->
+      <section class="panel panel-control" aria-labelledby="sec-control">
         <div class="panel-head">
-          <h2>Amiga game sources</h2>
+          <div class="panel-title-block">
+            <span class="panel-step" aria-hidden="true">1</span>
+            <h2 id="sec-control">Control RetroArch</h2>
+          </div>
         </div>
         <p class="panel-hint">
-          Databases and download sites open in your browser. Only use titles you are entitled to.
-          Archive.org collections can also be browsed below for direct TV install.
+          <strong>Main menu</strong> opens RetroArch on the TV (not a game) ·
+          <strong>Restart</strong> closes it and opens the menu again.
+          Use the tools on the right while a game is running.
         </p>
-        <div class="game-sources-groups">
-          <div class="game-sources-group">
-            <h3 class="game-sources-heading">Primary sources</h3>
-            <div id="game-sources-primary" class="game-sources-list" role="list"></div>
+        <div class="control-layout">
+          <div class="control-main">
+            <div class="control-group">
+              <span class="control-group-label">Power</span>
+              <div class="row gap wrap">
+                <button
+                  type="button"
+                  data-act="launch"
+                  class="primary"
+                  title="Open RetroArch’s main menu on the TV (does not start a game)"
+                >
+                  Main menu
+                </button>
+                <button
+                  type="button"
+                  data-act="restart"
+                  title="Close RetroArch and open the main menu again"
+                >
+                  Restart
+                </button>
+              </div>
+            </div>
+            <div class="control-group">
+              <span class="control-group-label">Bluetooth / gamepad</span>
+              <div class="row gap wrap">
+                <button
+                  type="button"
+                  id="btn-setup-controller"
+                  class="primary"
+                  title="Set sdl2 driver, enable autoconfig, download controller profiles on the TV"
+                >
+                  Auto-configure controller
+                </button>
+                <button
+                  type="button"
+                  id="btn-setup-controller-refresh"
+                  class="secondary"
+                  title="Re-download joypad profiles and re-apply settings"
+                >
+                  Refresh profiles
+                </button>
+              </div>
+              <p class="panel-hint" style="margin: 4px 0 0">
+                Writes RetroArch settings on the TV (sdl2 + autoconfig) and installs controller
+                profiles. Pair the pad on the TV, then <strong>Restart</strong> RetroArch.
+              </p>
+              <div
+                id="controller-status"
+                class="kickstart-status field-status"
+                role="status"
+                aria-live="polite"
+                hidden
+              ></div>
+            </div>
           </div>
-          <div class="game-sources-group">
-            <h3 class="game-sources-heading">Abandonware / community</h3>
-            <div id="game-sources-community" class="game-sources-list" role="list"></div>
-          </div>
+
+          <aside class="playing-tools" aria-labelledby="playing-tools-title">
+            <div class="playing-tools-head">
+              <span class="playing-tools-badge" aria-hidden="true">▶</span>
+              <div>
+                <h3 id="playing-tools-title" class="playing-tools-title">While playing</h3>
+                <p class="playing-tools-sub">Input &amp; TV controls for the active game</p>
+              </div>
+            </div>
+            <div class="playing-tools-grid">
+              <button type="button" id="btn-mouse-window" class="playing-tool-card">
+                <span class="playing-tool-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="6.5" y="2.5" width="11" height="19" rx="5.5" />
+                    <line x1="12" y1="6" x2="12" y2="10" />
+                    <path d="M6.5 11h11" />
+                  </svg>
+                </span>
+                <span class="playing-tool-text">
+                  <span class="playing-tool-name">Mouse + keyboard</span>
+                  <span class="playing-tool-desc">Pointer, clicks &amp; typing on the TV</span>
+                </span>
+                <span class="playing-tool-chevron" aria-hidden="true">›</span>
+              </button>
+              <button type="button" id="btn-amiga-fire" class="playing-tool-card" title="Inject Fire + keys + L/R/M mouse clicks on the TV (title screens).">
+                <span class="playing-tool-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="8" />
+                    <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+                  </svg>
+                </span>
+                <span class="playing-tool-text">
+                  <span class="playing-tool-name">Fire / Start</span>
+                  <span class="playing-tool-desc">Pad Fire + keys + L/R/M mouse</span>
+                </span>
+                <span class="playing-tool-chevron" aria-hidden="true">›</span>
+              </button>
+              <div class="playing-mouse-btns" role="group" aria-label="Amiga mouse buttons">
+                <button type="button" id="btn-amiga-lmb" class="secondary small" title="Amiga left mouse button">LMB</button>
+                <button type="button" id="btn-amiga-rmb" class="secondary small" title="Amiga right mouse button">RMB</button>
+                <button type="button" id="btn-amiga-mmb" class="secondary small" title="Middle mouse (emulator extra — classic Amiga mice had only L+R)">MMB</button>
+              </div>
+              <button type="button" id="btn-remote-window" class="playing-tool-card">
+                <span class="playing-tool-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+                    <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+                  </svg>
+                </span>
+                <span class="playing-tool-text">
+                  <span class="playing-tool-name">Volume</span>
+                  <span class="playing-tool-desc">TV volume up / down / mute</span>
+                </span>
+                <span class="playing-tool-chevron" aria-hidden="true">›</span>
+              </button>
+            </div>
+            <p class="playing-tools-tip" id="amiga-start-tip">
+              <strong>Batman / most action games:</strong> press gamepad <strong>B (Fire)</strong> after
+              <strong>Play</strong> (pad index is fixed on launch). Classic Amiga mice have
+              <strong>LMB + RMB only</strong> — MMB is an emulator extra and few titles use it.
+              Title screens almost never need middle-click.
+            </p>
+          </aside>
         </div>
       </section>
 
-      <section class="panel catalog-panel">
+      <!-- 2. Games / demos / media already on the TV -->
+      <section class="panel panel-primary" aria-labelledby="sec-disks">
         <div class="panel-head">
-          <h2>Install ADFs from Archive.org</h2>
-          <button type="button" id="btn-catalog-refresh" class="secondary small" title="Refresh Archive.org catalog cache">
+          <div class="panel-title-block">
+            <span class="panel-step" aria-hidden="true">2</span>
+            <h2 id="sec-disks">Games, demos &amp; media on TV</h2>
+          </div>
+          <div class="panel-head-actions">
+            <button
+              type="button"
+              id="btn-adf-add"
+              class="primary small"
+              title="Copy .adf files from this Mac to the TV (Amiga)"
+            >
+              Upload Amiga…
+            </button>
+            <button type="button" id="btn-adfs" class="secondary small">Reload</button>
+          </div>
+        </div>
+        <p class="panel-hint">
+          Installed games, demos, and other media under <code>disks/</code> on the TV
+          (Amiga, SNES, NES, Genesis, and more).
+          <strong>Play</strong> works for Amiga (.adf) with PUAE — press
+          <strong>gamepad B (Fire)</strong> on title screens.
+          Other systems show here so you can confirm installs; launch those in RetroArch on the TV for now.
+        </p>
+        <div id="adf-list" class="list list-primary media-on-tv-list"></div>
+        <p class="panel-hint pad-map-settings-hint">
+          Need a mouse click while using a gamepad?
+          <button type="button" id="btn-open-pad-map-settings" class="link-btn">
+            Controller mapping in Settings
+          </button>
+        </p>
+      </section>
+
+      <!-- 3. Install more games (systems match Settings cores) -->
+      <section class="panel catalog-panel" aria-labelledby="sec-install">
+        <div class="panel-head">
+          <div class="panel-title-block">
+            <span class="panel-step" aria-hidden="true">3</span>
+            <h2 id="sec-install">Install games from Archive.org</h2>
+          </div>
+          <button
+            type="button"
+            id="btn-catalog-refresh"
+            class="secondary small"
+            title="Refresh Archive.org catalog cache"
+          >
             Refresh catalog
           </button>
         </div>
-        <p class="panel-hint">
-          Search <strong>games</strong>, <strong>demos</strong>, or <strong>utilities</strong> across Archive.org —
-          or pick a site and browse. Install selected disks to the TV.
+        <p class="panel-hint" id="catalog-system-hint">
+          Choose a system that matches a core in Settings, then browse or search Archive.org — only install titles you are legally entitled to.
         </p>
 
-        <div class="catalog-category-bar" role="tablist" aria-label="Catalog category">
+        <div
+          class="catalog-system-bar"
+          role="tablist"
+          aria-label="Console system (matches Settings cores)"
+        >
+          <!-- Filled by renderCatalogSystemChips() — Amiga, NES, SNES, Genesis, GBA, GB/C, N64, PS1 -->
+        </div>
+
+        <div class="catalog-category-bar" id="catalog-category-bar" role="tablist" aria-label="Catalog category">
           <button type="button" class="cat-chip active" data-cat="all" role="tab" aria-selected="true">All</button>
           <button type="button" class="cat-chip" data-cat="games" role="tab" aria-selected="false">Games</button>
           <button type="button" class="cat-chip" data-cat="demos" role="tab" aria-selected="false">Demos</button>
@@ -444,6 +951,13 @@
             Install selected
           </button>
         </div>
+        <div
+          id="catalog-install-banner"
+          class="catalog-install-banner"
+          role="status"
+          aria-live="polite"
+          hidden
+        ></div>
 
         <div class="catalog-add-site">
           <input
@@ -458,61 +972,89 @@
             placeholder="Label (optional)"
             autocomplete="off"
           />
-          <button type="button" id="btn-catalog-add-site" class="primary small">Add site</button>
+          <button type="button" id="btn-catalog-add-site" class="secondary small">Add site</button>
         </div>
 
         <div class="catalog-steps">
           <div class="catalog-col">
             <div class="catalog-col-head">
-              <h3>1. Site <span class="muted" id="catalog-cat-hint"></span></h3>
+              <h3>Sites <span class="muted" id="catalog-cat-hint"></span></h3>
               <button type="button" id="btn-catalog-sites" class="secondary small">Reload sites</button>
             </div>
             <div id="catalog-sites" class="list catalog-sites" role="listbox" aria-label="Catalog sites"></div>
           </div>
           <div class="catalog-col catalog-adfs-col">
             <div class="catalog-col-head">
-              <h3>2. Results</h3>
+              <h3>Results</h3>
               <span id="catalog-meta" class="catalog-meta muted"></span>
             </div>
             <div id="catalog-adfs" class="list catalog-adfs">
               <div class="empty">Search above, or select a site on the left.</div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <div class="split">
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Amiga disks on TV</h2>
-            <div class="panel-head-actions">
-              <button type="button" id="btn-adf-add" class="primary small" title="Copy .adf files from this Mac to the TV">
-                Add…
+            <div class="catalog-pager" id="catalog-pager" hidden>
+              <button type="button" id="btn-catalog-prev-foot" class="secondary small" disabled>
+                ← Prev page
               </button>
-              <button type="button" id="btn-adfs" class="secondary small">Reload</button>
+              <span id="catalog-pager-label" class="catalog-pager-label muted"></span>
+              <button type="button" id="btn-catalog-next-foot" class="primary small" disabled>
+                Next page →
+              </button>
             </div>
           </div>
+        </div>
+
+        <!-- External research links (secondary; collapsed by default) -->
+        <details class="more-block game-sources-panel">
+          <summary class="more-summary">
+            Browse Amiga databases in your browser
+            <span class="more-summary-hint">Lemon Amiga, Hall of Light, …</span>
+          </summary>
           <p class="panel-hint">
-            Already on the TV. <strong>Add…</strong> uploads local files; catalog install appears above.
+            Amiga research links (open in your browser). For one-click install to the TV,
+            use the Amiga Archive.org catalogs above.
           </p>
-          <div id="adf-list" class="list"></div>
-        </section>
-        <section class="panel">
+          <div class="game-sources-groups">
+            <div class="game-sources-group">
+              <h3 class="game-sources-heading">Primary sources</h3>
+              <div id="game-sources-primary" class="game-sources-list" role="list"></div>
+            </div>
+            <div class="game-sources-group">
+              <h3 class="game-sources-heading">Abandonware / community</h3>
+              <div id="game-sources-community" class="game-sources-list" role="list"></div>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- 4. Advanced / diagnostics -->
+      <div class="split secondary-split">
+        <section class="panel panel-secondary panel-engines" aria-labelledby="sec-cores">
           <div class="panel-head">
-            <h2>Emulator cores</h2>
+            <div class="panel-title-block">
+              <span class="panel-step muted-step" aria-hidden="true">4</span>
+              <h2 id="sec-cores">Engines on TV</h2>
+            </div>
             <button type="button" id="btn-cores" class="secondary small">Reload</button>
           </div>
-          <pre id="core-list" class="log mono"></pre>
+          <p class="panel-hint">
+            Emulation <strong>engines</strong> (libretro cores) installed on the TV.
+            <strong>Amiga</strong> powers Play ADF; other consoles run inside RetroArch.
+            Install more under Settings → Amiga &amp; engines.
+          </p>
+          <div id="core-list" class="core-installed-list engine-grid engine-grid-installed" aria-live="polite"></div>
+        </section>
+        <section class="panel panel-secondary" aria-labelledby="sec-log">
+          <div class="panel-head">
+            <div class="panel-title-block">
+              <span class="panel-step muted-step" aria-hidden="true">·</span>
+              <h2 id="sec-log">Activity log</h2>
+            </div>
+            <button type="button" id="btn-clear" class="secondary small">Clear</button>
+          </div>
+          <p class="panel-hint">Command output from SSH / install / launch.</p>
+          <pre id="log" class="log mono log-compact"></pre>
         </section>
       </div>
-
-      <section class="panel">
-        <div class="panel-head">
-          <h2>Output</h2>
-          <button type="button" id="btn-clear" class="secondary small">Clear</button>
-        </div>
-        <pre id="log" class="log mono"></pre>
-      </section>
     </main>
   </body>
 </html>

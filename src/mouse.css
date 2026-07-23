@@ -161,6 +161,8 @@ body {
   width: 28px;
   height: 28px;
   border-radius: 7px;
+  object-fit: contain;
+  background: transparent;
   flex-shrink: 0;
 }
 
@@ -476,18 +478,250 @@ h1 {
   background: linear-gradient(180deg, var(--lmb-hover-from), var(--lmb-hover-to));
 }
 
-/* ── Virtual keyboard ────────────────────────────────────── */
+/* ── Keyboard mode toggle ────────────────────────────────── */
+.kb-mode-bar {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-bottom: 2px;
+}
+
+.kb-mode-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.kb-mode-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.kb-mode-btn.active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: color-mix(in srgb, var(--accent-dim) 70%, var(--surface));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.kb-mode-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kb-mode-dot.a500-dot {
+  background: linear-gradient(145deg, #e8c89a, #c41e3a 70%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #000 25%, transparent);
+}
+
+.kb-mode-dot.generic-dot {
+  background: linear-gradient(145deg, #94a3b8, #334155);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #000 25%, transparent);
+}
+
+/* ── A500 virtual keyboard (lifelike chassis) ────────────── */
+.kb-col {
+  --a500-case: #c4b08c;
+  --a500-case-mid: #b49a78;
+  --a500-case-deep: #968060;
+  --a500-well: #1a1816;
+  --a500-key: #d8d2c4;
+  --a500-key-top: #f0ebe0;
+  --a500-key-side: #a09888;
+  --a500-key-bot: #8a8274;
+  --a500-key-text: #2c2820;
+  --a500-fn: #cfc6b4;
+  --a500-mod: #b8ae9a;
+  --a500-amiga: #c41e3a;
+  --a500-badge: #3a342c;
+  --a500-led: #ff2a2a;
+}
+
+html[data-theme="light"] .kb-col {
+  --a500-case: #d0bc98;
+  --a500-case-mid: #c0a880;
+  --a500-case-deep: #a88860;
+  --a500-well: #24201c;
+}
+
 .kb {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* A500 outer shell — ABS beige, aged plastic */
+.kb.a500-kb {
+  padding: 12px 12px 8px;
+  border-radius: 16px 16px 12px 12px;
+  border: 1px solid color-mix(in srgb, var(--a500-case-deep) 80%, #000);
+  background:
+    /* subtle surface grain */
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      color-mix(in srgb, #000 2.5%, transparent) 2px,
+      color-mix(in srgb, #000 2.5%, transparent) 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 3px,
+      color-mix(in srgb, #fff 3%, transparent) 3px,
+      color-mix(in srgb, #fff 3%, transparent) 4px
+    ),
+    linear-gradient(
+      168deg,
+      color-mix(in srgb, var(--a500-case) 88%, #fff) 0%,
+      var(--a500-case) 28%,
+      var(--a500-case-mid) 62%,
+      var(--a500-case-deep) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 45%, transparent),
+    inset 0 -3px 6px color-mix(in srgb, #000 18%, transparent),
+    inset 2px 0 4px color-mix(in srgb, #fff 12%, transparent),
+    inset -2px 0 4px color-mix(in srgb, #000 12%, transparent),
+    0 10px 28px color-mix(in srgb, #000 40%, transparent),
+    0 2px 0 color-mix(in srgb, var(--a500-case-deep) 80%, #000);
+}
+
+.a500-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 6px 10px;
+  user-select: none;
+}
+
+.a500-badge-left {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.a500-badge-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  font-family: "Futura", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #fff8f0;
+  background: linear-gradient(155deg, #f04858 0%, var(--a500-amiga) 55%, #8a1020 100%);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, #000 45%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 35%, transparent),
+    inset 0 -1px 1px color-mix(in srgb, #000 25%, transparent);
+  letter-spacing: -0.04em;
+}
+
+.a500-badge-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--a500-badge);
+  line-height: 1.1;
+}
+
+.a500-badge-text strong {
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  font-size: 0.82rem;
+}
+
+.a500-badge-sub {
+  font-size: 0.65rem;
+  letter-spacing: 0.28em;
+  opacity: 0.75;
+  font-weight: 600;
+}
+
+.a500-badge-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.a500-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff8a8a, var(--a500-led) 55%, #800);
+  box-shadow:
+    0 0 6px color-mix(in srgb, var(--a500-led) 80%, transparent),
+    0 0 1px #400,
+    inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent);
+}
+
+.a500-led-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--a500-badge);
+  opacity: 0.7;
+}
+
+/* Recessed key well — deep charcoal cavity */
+.a500-well {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 4px;
-  padding: 6px 4px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  padding: 12px 10px 14px;
+  border-radius: 8px;
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 0%, color-mix(in srgb, #fff 5%, transparent), transparent),
+    linear-gradient(180deg, #0e0c0a 0%, var(--a500-well) 40%, #141210 100%);
+  box-shadow:
+    inset 0 4px 14px color-mix(in srgb, #000 70%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #000 50%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 4%, transparent);
+}
+
+.a500-feet {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 18px 2px;
+  pointer-events: none;
+}
+
+.a500-foot {
+  width: 28px;
+  height: 5px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #6a6050, #3a3428);
+  box-shadow: 0 1px 2px color-mix(in srgb, #000 40%, transparent);
 }
 
 .kb-row {
@@ -497,62 +731,450 @@ h1 {
   flex-wrap: nowrap;
 }
 
-.key {
+/* F-key island spacing (Esc | F1–F5 | F6–F10 | Del Help) */
+.a500-kb .key.g-f1:first-of-type,
+.a500-kb .kb-row .key.a500-esc + .key.g-f1 {
+  margin-left: 6px;
+}
+
+.a500-kb .key.g-f1 + .key.g-f2 {
+  margin-left: 8px;
+}
+
+.a500-kb .key.g-f2 + .key.g-help {
+  margin-left: 8px;
+}
+
+/* ── Keycaps — tall ABS profile ─────────────────────────── */
+.a500-kb .key {
   appearance: none;
+  position: relative;
+  border: none;
+  background:
+    linear-gradient(
+      180deg,
+      var(--a500-key-top) 0%,
+      var(--a500-key) 38%,
+      #ccc6b8 72%,
+      #b8b0a0 100%
+    );
+  color: var(--a500-key-text);
+  border-radius: 4px 4px 3px 3px;
+  min-width: 29px;
+  min-height: 34px;
+  padding: 3px 3px 5px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.74rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  flex: 0 0 auto;
+  /* side walls + bottom lip for height */
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 70%, transparent),
+    inset 1px 0 0 color-mix(in srgb, #fff 25%, transparent),
+    inset -1px 0 0 color-mix(in srgb, #000 8%, transparent),
+    0 1px 0 var(--a500-key-side),
+    0 2px 0 var(--a500-key-bot),
+    0 3px 0 #5a5448,
+    0 4px 3px color-mix(in srgb, #000 40%, transparent);
+  transition:
+    transform 0.06s ease,
+    box-shadow 0.06s ease,
+    filter 0.1s ease;
+  text-shadow: 0 1px 0 color-mix(in srgb, #fff 50%, transparent);
+}
+
+.a500-kb .key:hover {
+  filter: brightness(1.03) saturate(1.05);
+}
+
+.a500-kb .key:active,
+.a500-kb .key.pressed {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 4px color-mix(in srgb, #000 28%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 20%, transparent),
+    0 0 0 var(--a500-key-side),
+    0 1px 0 var(--a500-key-bot),
+    0 1px 2px color-mix(in srgb, #000 30%, transparent);
+  filter: brightness(0.96);
+}
+
+.a500-kb .key.dual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1;
+  padding-top: 3px;
+  padding-bottom: 4px;
+}
+
+.a500-kb .key-legend-top {
+  font-size: 0.55rem;
+  font-weight: 650;
+  opacity: 0.68;
+  color: #4a4438;
+}
+
+.a500-kb .key-legend-bot {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.a500-kb .key.dual.shift-layer .key-legend-top {
+  opacity: 1;
+  color: var(--a500-amiga);
+  font-weight: 800;
+}
+
+.a500-kb .key.dual.shift-layer .key-legend-bot {
+  opacity: 0.4;
+}
+
+.a500-kb .key.wide {
+  min-width: 42px;
+}
+
+.a500-kb .key.wider {
+  min-width: 58px;
+}
+
+.a500-kb .key.tab {
+  min-width: 50px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.a500-kb .key.caps {
+  min-width: 46px;
+  font-size: 0.52rem;
+  line-height: 1.05;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.a500-kb .key.ctrl {
+  min-width: 42px;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+}
+
+.a500-kb .key.shift {
+  min-width: 64px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.a500-kb .key.alt {
+  min-width: 38px;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+}
+
+.a500-kb .key.amiga {
+  min-width: 38px;
+  padding: 3px 2px 5px;
+}
+
+.a500-kb .key.space {
+  min-width: 130px;
+  flex: 1 1 110px;
+  max-width: 280px;
+  min-height: 34px;
+}
+
+.a500-kb .space-bar-face {
+  display: block;
+  width: 70%;
+  height: 3px;
+  margin: 0 auto;
+  border-radius: 2px;
+  background: color-mix(in srgb, #000 12%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 30%, transparent);
+}
+
+.a500-kb .key.mod {
+  background:
+    linear-gradient(
+      180deg,
+      #e0d8c8 0%,
+      var(--a500-mod) 45%,
+      #a89880 100%
+    );
+  font-size: 0.6rem;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #3a3428;
+}
+
+.a500-kb .key.fn {
+  min-width: 29px;
+  min-height: 28px;
+  font-size: 0.58rem;
+  font-weight: 750;
+  background:
+    linear-gradient(180deg, #e4dcc8 0%, var(--a500-fn) 50%, #b8a890 100%);
+  color: #3a3428;
+  letter-spacing: 0.02em;
+}
+
+.a500-kb .key.a500-help {
+  color: #6a2010;
+  letter-spacing: 0.06em;
+}
+
+.a500-kb .key.a500-return,
+.a500-kb .key.enter {
+  min-width: 62px;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background:
+    linear-gradient(180deg, #ebe2d0 0%, #d0c4a8 45%, #b8a888 100%);
+  color: #2a2418;
+}
+
+.a500-kb .key.a500-shift.on,
+.a500-kb .key.a500-shift[aria-pressed="true"] {
+  background:
+    linear-gradient(180deg, #fff0c8 0%, #f0c860 45%, #c89830 100%);
+  color: #3a2808;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 50%, transparent),
+    0 1px 0 #a88020,
+    0 2px 0 #806018,
+    0 3px 2px color-mix(in srgb, #000 35%, transparent);
+}
+
+.a500-kb .key.arrow {
+  min-width: 28px;
+  font-size: 0.78rem;
+}
+
+.a500-kb .key-line {
+  display: block;
+  line-height: 1.1;
+}
+
+/* Red “A” Amiga key badge */
+.amiga-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 24px;
+}
+
+.amiga-a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45em;
+  height: 1.45em;
+  border-radius: 3px;
+  font-family: "Futura", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: #fff8f0;
+  background: linear-gradient(155deg, #f05060, var(--a500-amiga) 55%, #8a1020);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, #000 40%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 35%, transparent),
+    inset 0 -1px 1px color-mix(in srgb, #000 30%, transparent);
+  text-shadow: 0 1px 1px color-mix(in srgb, #000 45%, transparent);
+}
+
+.a500-kb .key.a500-amiga {
+  background:
+    linear-gradient(180deg, #e4dcc8 0%, #c8bca8 50%, #a89880 100%);
+}
+
+/* ── Generic modern keyboard ─────────────────────────────── */
+.kb.generic-kb {
+  padding: 10px;
+  border-radius: 12px;
   border: 1px solid var(--border);
-  background: var(--btn-bg);
+  background:
+    linear-gradient(180deg, var(--panel) 0%, color-mix(in srgb, var(--surface) 80%, #000) 100%);
+  box-shadow: 0 4px 16px color-mix(in srgb, #000 25%, transparent);
+}
+
+.generic-badge {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 8px;
+}
+
+.generic-badge-text {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.generic-badge-hint {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.generic-well {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 90%, #000);
+  border: 1px solid var(--border);
+}
+
+.generic-kb .key {
+  appearance: none;
+  border: 1px solid var(--border-strong, var(--border));
+  background: linear-gradient(180deg, var(--btn-hover, #2a3444), var(--btn-bg, #1c2430));
   color: var(--text);
   border-radius: 6px;
   min-width: 28px;
   min-height: 32px;
-  padding: 3px 5px;
+  padding: 3px 4px;
   font: inherit;
   font-weight: 600;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   cursor: pointer;
-  transition: transform 0.04s, background 0.1s, border-color 0.1s;
   flex: 0 0 auto;
+  box-shadow: 0 1px 0 color-mix(in srgb, #000 35%, transparent);
+  transition: transform 0.05s ease, background 0.1s ease, border-color 0.1s ease;
+  text-shadow: none;
 }
 
-.key:hover {
-  background: var(--btn-hover);
-  border-color: var(--border-strong);
+.generic-kb .key:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-dim) 50%, var(--btn-bg));
 }
 
-.key:active,
-.key.pressed {
+.generic-kb .key:active,
+.generic-kb .key.pressed {
   transform: scale(0.96);
   border-color: var(--accent);
-  background: var(--key-active);
+  background: var(--key-active, var(--accent-dim));
   color: var(--accent-soft);
 }
 
-.key.wide {
+.generic-kb .key.dual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  line-height: 1.05;
+}
+
+.generic-kb .key-legend-top {
+  font-size: 0.55rem;
+  font-weight: 600;
+  opacity: 0.65;
+  color: var(--muted);
+}
+
+.generic-kb .key-legend-bot {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.generic-kb .key.dual.shift-layer .key-legend-top {
+  opacity: 1;
+  color: var(--accent-soft);
+}
+
+.generic-kb .key.dual.shift-layer .key-legend-bot {
+  opacity: 0.45;
+}
+
+.generic-kb .key.wide {
+  min-width: 42px;
+}
+
+.generic-kb .key.wider {
+  min-width: 56px;
+}
+
+.generic-kb .key.tab {
+  min-width: 48px;
+  font-size: 0.65rem;
+}
+
+.generic-kb .key.caps,
+.generic-kb .key.ctrl {
   min-width: 44px;
+  font-size: 0.62rem;
 }
 
-.key.wider {
-  min-width: 58px;
+.generic-kb .key.shift {
+  min-width: 62px;
+  font-size: 0.65rem;
 }
 
-.key.space {
-  min-width: 140px;
-  flex: 1 1 120px;
+.generic-kb .key.alt {
+  min-width: 40px;
+  font-size: 0.62rem;
+}
+
+.generic-kb .key.space {
+  min-width: 120px;
+  flex: 1 1 100px;
   max-width: 280px;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-.key.enter {
+.generic-kb .key.mod {
+  font-size: 0.62rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.generic-kb .key.fn {
+  min-width: 26px;
+  min-height: 26px;
+  font-size: 0.6rem;
+  color: var(--muted);
+}
+
+.generic-kb .key.enter {
   min-width: 56px;
   background: linear-gradient(180deg, var(--accent-dim), var(--btn-bg));
   border-color: var(--accent);
   color: var(--accent-soft);
+  font-size: 0.65rem;
+  text-transform: uppercase;
 }
 
-.key.fn {
-  min-width: 26px;
-  min-height: 26px;
-  font-size: 0.65rem;
-  color: var(--muted);
+.generic-kb .key.gen-shift.on,
+.generic-kb .key.a500-shift.on {
+  background: color-mix(in srgb, var(--accent-dim) 80%, var(--btn-bg));
+  border-color: var(--accent);
+  color: var(--accent-soft);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.generic-kb .key.arrow {
+  min-width: 28px;
+  font-size: 0.75rem;
 }
 
 .type-row {
@@ -611,17 +1233,18 @@ h1 {
 .status {
   margin: 0;
   flex-shrink: 0;
-  max-height: 2.2em;
-  padding: 5px 8px;
-  font-size: 0.68rem;
-  color: var(--muted);
+  max-height: 3.2em;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  font-weight: 550;
+  color: var(--text);
   background: var(--status-bg);
   border: 1px solid var(--border);
   border-radius: 7px;
   white-space: pre-wrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 .mono {
@@ -639,45 +1262,100 @@ h1 {
     grid-template-columns: 1fr auto auto;
   }
 
-  .key {
+  .kb.a500-kb,
+  .kb.generic-kb {
+    padding: 6px;
+  }
+
+  .a500-well,
+  .generic-well {
+    gap: 3px;
+    padding: 6px 4px;
+  }
+
+  .a500-kb .key,
+  .generic-kb .key {
     min-width: 22px;
-    min-height: 28px;
-    font-size: 0.7rem;
+    min-height: 26px;
+    font-size: 0.62rem;
     padding: 2px 3px;
   }
 
-  .key.fn {
+  .a500-kb .key.fn,
+  .generic-kb .key.fn {
     min-width: 22px;
-    min-height: 22px;
+    min-height: 20px;
+    font-size: 0.52rem;
   }
 
-  .key.space {
-    min-width: 100px;
+  .a500-kb .key.space,
+  .generic-kb .key.space {
+    min-width: 72px;
+  }
+
+  .a500-kb .key.shift,
+  .generic-kb .key.shift {
+    min-width: 44px;
+  }
+
+  .a500-badge-text {
+    font-size: 0.62rem;
+  }
+
+  .kb-mode-btn {
+    font-size: 0.72rem;
+    padding: 5px 10px;
   }
 }
 
 @media (min-width: 960px) {
-  .key {
-    min-width: 34px;
-    min-height: 36px;
-    font-size: 0.85rem;
+  .a500-kb .key {
+    min-width: 32px;
+    min-height: 38px;
+    font-size: 0.8rem;
   }
 
-  .key.fn {
+  .generic-kb .key {
+    min-width: 32px;
+    min-height: 36px;
+    font-size: 0.8rem;
+  }
+
+  .a500-kb .key.fn,
+  .generic-kb .key.fn {
     min-width: 30px;
     min-height: 28px;
+    font-size: 0.65rem;
   }
 
-  .key.wide {
-    min-width: 52px;
+  .a500-kb .key.wide,
+  .generic-kb .key.wide {
+    min-width: 48px;
   }
 
-  .key.wider {
+  .a500-kb .key.wider,
+  .generic-kb .key.wider {
+    min-width: 68px;
+  }
+
+  .a500-kb .key.shift,
+  .generic-kb .key.shift {
     min-width: 72px;
   }
 
-  .key.space {
-    min-width: 200px;
-    max-width: 360px;
+  .a500-kb .key.space,
+  .generic-kb .key.space {
+    min-width: 180px;
+    max-width: 320px;
+  }
+
+  .a500-kb .key-legend-top,
+  .generic-kb .key-legend-top {
+    font-size: 0.62rem;
+  }
+
+  .a500-kb .key-legend-bot,
+  .generic-kb .key-legend-bot {
+    font-size: 0.85rem;
   }
 }

@@ -26,16 +26,22 @@
           </div>
         </div>
         <div class="control-top-actions">
-          <label class="speed">
+          <label class="speed" title="Mouse sensitivity on the TV (1 = precise, 10 = fast). Hold Shift while dragging for fine aim.">
             Speed
-            <input id="speed" type="range" min="1" max="8" value="3" />
-            <span id="speed-val">3</span>
+            <input id="speed" type="range" min="1" max="10" value="6" />
+            <span id="speed-val">6</span>
           </label>
           <button type="button" id="btn-shift" class="mod" aria-pressed="false" title="Shift">
             Shift
           </button>
-          <button type="button" id="btn-show-cursor" class="ghost-sm" title="Show the TV pointer">
-            Cursor
+          <button
+            type="button"
+            id="btn-show-cursor"
+            class="ghost-sm"
+            title="System pointer mode (for menus). Off by default so music keeps playing."
+            aria-pressed="false"
+          >
+            System cursor
           </button>
         </div>
       </header>
@@ -98,14 +104,40 @@
           </div>
         </section>
 
-        <!-- Keyboard column -->
-        <section class="kb-col" aria-label="Keyboard">
-          <div id="kb" class="kb" role="group" aria-label="Virtual keyboard"></div>
+        <!-- Keyboard column — A500 or generic -->
+        <section class="kb-col" aria-label="Virtual keyboard">
+          <div class="kb-mode-bar" role="tablist" aria-label="Keyboard style">
+            <button
+              type="button"
+              id="kb-mode-a500"
+              class="kb-mode-btn active"
+              role="tab"
+              aria-selected="true"
+              data-kb-mode="a500"
+              title="Commodore Amiga 500 layout"
+            >
+              <span class="kb-mode-dot a500-dot" aria-hidden="true"></span>
+              Amiga 500
+            </button>
+            <button
+              type="button"
+              id="kb-mode-generic"
+              class="kb-mode-btn"
+              role="tab"
+              aria-selected="false"
+              data-kb-mode="generic"
+              title="Modern PC-style layout"
+            >
+              <span class="kb-mode-dot generic-dot" aria-hidden="true"></span>
+              Generic
+            </button>
+          </div>
+          <div id="kb" class="kb a500-kb" role="group" aria-label="Virtual keyboard"></div>
           <div class="type-row">
             <input
               id="type-input"
               type="text"
-              placeholder="Type a line → Send…"
+              placeholder="Type here, then Send / Enter → Amiga"
               autocomplete="off"
               spellcheck="false"
             />

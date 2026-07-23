@@ -5,6 +5,9 @@
   "windows": ["main", "mouse", "remote"],
   "permissions": [
     "core:default",
+    "core:event:allow-emit",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
     "core:window:allow-create",
     "core:window:allow-close",
     "core:window:allow-set-focus",

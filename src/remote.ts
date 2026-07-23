@@ -161,7 +161,7 @@ function startPolling() {
 window.addEventListener("DOMContentLoaded", async () => {
   initTheme();
   settings = await loadSettings();
-  $("target-label").textContent = `${settings.user}@${settings.host}`;
+  $("target-label").textContent = "webOS TV";
   paintVolume();
 
   document.querySelectorAll<HTMLButtonElement>("[data-btn]").forEach((btn) => {

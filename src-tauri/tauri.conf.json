@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "RetroArch Control",
+  "productName": "RetroArch Remote",
   "version": "0.1.0",
   "identifier": "com.aicoder.retroarch-control",
   "build": {
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "RetroArch Control",
+        "title": "RetroArch Remote",
         "width": 960,
         "height": 720,
         "minWidth": 720,

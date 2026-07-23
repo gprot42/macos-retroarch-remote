@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start RetroArch Control (Tauri + Bun) in dev mode.
+# Start RetroArch Remote (Tauri + Bun) in dev mode.
 #
 # Usage:
 #   ./start.sh              # install deps if needed, then tauri dev
@@ -52,6 +52,7 @@ fi
 # Sensible defaults if script path is wrong for this machine
 if [[ -z "${WEBOS_CONTROL_SCRIPT:-}" ]]; then
   CANDIDATES=(
+    "$HOME/src/public/RetroArch/webos/control-retroarch.sh"
     "$HOME/src/RetroArch/webos/control-retroarch.sh"
     "$HOME/src/retroarch/webos/control-retroarch.sh"
     "$(cd "$ROOT/../RetroArch/webos" 2>/dev/null && pwd)/control-retroarch.sh"
@@ -64,7 +65,7 @@ if [[ -z "${WEBOS_CONTROL_SCRIPT:-}" ]]; then
   done
 fi
 
-echo "==> RetroArch Control  ($MODE)"
+echo "==> RetroArch Remote  ($MODE)"
 echo "    project: $ROOT"
 if [[ -n "${WEBOS_CONTROL_SCRIPT:-}" ]]; then
   echo "    script:  $WEBOS_CONTROL_SCRIPT"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build RetroArch Control as a macOS .dmg
+# Build RetroArch Remote as a macOS .dmg
 #
 # Usage:
 #   ./build.sh              # release .dmg (current architecture)
@@ -9,7 +9,7 @@
 #   ./build.sh --clean      # cargo clean first, then build
 #
 # Output:
-#   ./RetroArch-Control-<version>-<arch>.dmg
+#   ./RetroArch-Remote-<version>-<arch>.dmg
 #   (also left under src-tauri/target/.../bundle/dmg/)
 #
 # Prerequisites: bun, cargo, rustc, Xcode CLT (macOS only)
@@ -61,10 +61,10 @@ VERSION="$(
   python3 -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['version'])" 2>/dev/null \
     || echo "0.1.0"
 )"
-PRODUCT="RetroArch Control"
+PRODUCT="RetroArch Remote"
 ARCH_NATIVE="$(uname -m)" # arm64 | x86_64
 
-echo "==> RetroArch Control — macOS .dmg build"
+echo "==> RetroArch Remote — macOS .dmg build"
 echo "    project: $ROOT"
 echo "    version: $VERSION"
 echo "    arch:    $ARCH_NATIVE$([ "$UNIVERSAL" -eq 1 ] && echo ' (universal)' || true)"
@@ -134,8 +134,8 @@ if [[ -z "$DMG_SRC" || ! -f "$DMG_SRC" ]]; then
   exit 1
 fi
 
-# Safe filename: RetroArch-Control-0.1.0-arm64.dmg
-SAFE_NAME="RetroArch-Control-${VERSION}-${ARCH_TAG}.dmg"
+# Safe filename: RetroArch-Remote-0.1.0-arm64.dmg
+SAFE_NAME="RetroArch-Remote-${VERSION}-${ARCH_TAG}.dmg"
 DMG_DST="$ROOT/$SAFE_NAME"
 cp -f "$DMG_SRC" "$DMG_DST"
 
