@@ -358,12 +358,12 @@ fn apply_ssh_mux(cmd: &mut Command) {
 /// Compact TV-side key inject (no full control-retroarch.sh).
 /// Uses r## so `"#":` in the Python map does not terminate the string.
 ///
-/// Injects into *all* host keyboard-like devices (CHECK INPUT first — same order as
-/// amiga-fire). SDL2/PUAE only listens on some nodes; writing one device often
-/// "succeeds" without the Amiga seeing the key. Hold times are Amiga-friendly
-/// (short holds are dropped by PUAE / host pass-through).
+/// Amiga typing strategy:
+/// - Prefer **CHECK INPUT** (open when RetroArch starts; SDL already listens).
+/// - Single device only (multi-blast caused "hello"→"o").
+/// - Slow holds; type_text_fast also spaces characters across separate SSH calls.
 const TV_KEY_PY: &str = r##"
-import os, struct, time as _t, sys, glob
+import os, struct, time as _t, sys, glob, errno
 def pack(t, c, v):
     now = _t.time()
     sec = int(now)
@@ -374,18 +374,34 @@ def pack(t, c, v):
         except struct.error:
             pass
     return struct.pack("llHHi", sec, usec, int(t), int(c), int(v))
-# Prefer order matches amiga-fire (CHECK INPUT before LGE RCU)
+
+# CHECK INPUT first — same device Return uses (SDL already has it open).
+# Virtual keyboard only if present (must exist before RetroArch launch).
 PREFER = (
-    "CHECK INPUT", "LGE Network Input", "Smart Remote RCU Input",
-    "LGE RCU", "IoT keypad",
+    "CHECK INPUT",
+    "RA Virtual Keyboard",
+    "LGE Network Input",
+    "Smart Remote RCU Input",
+    "LGE RCU",
+    "IoT keypad",
 )
-CACHE = "/tmp/ra-kb-ev"
-_KB_PATHS = None
-def kb_paths():
-    """All host keyboard event nodes RetroArch/SDL may read."""
-    global _KB_PATHS
-    if _KB_PATHS is not None:
-        return _KB_PATHS
+_KB_PATH = None
+_KB_NAME = None
+
+def ra_running():
+    for d in glob.glob("/proc/[0-9]*/cmdline"):
+        try:
+            c = open(d, "rb").read().replace(b"\0", b" ").decode("utf-8", "replace")
+        except Exception:
+            continue
+        if "retroarch" in c.lower():
+            return True
+    return False
+
+def kb_path():
+    global _KB_PATH, _KB_NAME
+    if _KB_PATH is not None and os.path.exists(_KB_PATH):
+        return _KB_PATH
     by = {}
     for np in glob.glob("/sys/class/input/event*/device/name"):
         try:
@@ -393,90 +409,38 @@ def kb_paths():
         except OSError:
             continue
         by[n] = "/dev/input/" + np.split("/")[4]
-    ordered = []
     for n in PREFER:
-        if n in by and by[n] not in ordered:
-            ordered.append(by[n])
-    # Also include any other EV_KEY device that is not a remote/mouse/pad
-    skip = ("m-rcu", "w-rcu", "tone", "clickable", "mouse", "audio",
-            "headset", "sensor", "touchpad", "motion", "simple premium",
-            "bluetooth-audio", "gamepad", "joystick", "controller",
-            "wireless controller")
-    for n, p in by.items():
-        if p in ordered:
-            continue
-        low = n.lower()
-        if any(s in low for s in skip):
-            continue
-        try:
-            base = "/sys/class/input/%s/device" % p.rsplit("/", 1)[-1]
-            ev = open(base + "/capabilities/ev").read().split()
-            if ev and (int(ev[0], 16) & 2):
-                ordered.append(p)
-        except Exception:
-            pass
-    if not ordered:
-        raise SystemExit("no keyboard device")
-    try:
-        open(CACHE, "w").write(ordered[0])
-    except Exception:
-        pass
-    _KB_PATHS = ordered
-    return ordered
-def kb():
-    return kb_paths()[0]
-def _open_fds():
-    fds = []
-    for p in kb_paths():
-        try:
-            fds.append(os.open(p, os.O_WRONLY | os.O_NONBLOCK))
-        except OSError:
-            try:
-                fds.append(os.open(p, os.O_WRONLY))
-            except OSError:
-                pass
-    if not fds:
-        raise SystemExit("cannot open keyboard device")
-    return fds
-def _write_all(fds, payload):
-    for fd in fds:
+        if n in by and os.path.exists(by[n]):
+            _KB_PATH = by[n]
+            _KB_NAME = n
+            return _KB_PATH
+    raise SystemExit("no keyboard device (CHECK INPUT / LGE RCU missing)")
+
+def kb_name():
+    kb_path()
+    return _KB_NAME or "?"
+
+def _open_fd():
+    return os.open(kb_path(), os.O_WRONLY)
+
+def _write_ev(fd, typ, code, value):
+    payload = pack(typ, code, value) + pack(0, 0, 0)
+    for _ in range(30):
         try:
             os.write(fd, payload)
-        except OSError:
-            pass
-def _close_fds(fds):
-    for fd in fds:
-        try:
-            os.close(fd)
-        except OSError:
-            pass
-# Amiga needs longer holds than a PC; 12ms was often dropped by PUAE.
-HOLD = 0.045
-GAP = 0.030
-def tap(code, hold=None):
-    if hold is None:
-        hold = HOLD
-    fds = _open_fds()
-    try:
-        _write_all(fds, pack(1, code, 1) + pack(0, 0, 0))
-        _t.sleep(hold)
-        _write_all(fds, pack(1, code, 0) + pack(0, 0, 0))
-    finally:
-        _close_fds(fds)
-def tap_shifted(code, hold=None):
-    if hold is None:
-        hold = HOLD
-    fds = _open_fds()
-    try:
-        _write_all(fds, pack(1, SHIFT, 1) + pack(0, 0, 0))
-        _t.sleep(0.012)
-        _write_all(fds, pack(1, code, 1) + pack(0, 0, 0))
-        _t.sleep(hold)
-        _write_all(fds, pack(1, code, 0) + pack(0, 0, 0))
-        _t.sleep(0.008)
-        _write_all(fds, pack(1, SHIFT, 0) + pack(0, 0, 0))
-    finally:
-        _close_fds(fds)
+            return
+        except OSError as e:
+            if getattr(e, "errno", None) in (errno.EAGAIN, errno.EWOULDBLOCK, errno.EINTR):
+                _t.sleep(0.003)
+                continue
+            raise
+    raise OSError("keyboard write failed")
+
+# Amiga-safe holds. Letters need longer gaps than Return alone.
+HOLD = 0.16
+GAP = 0.08
+SHIFT = 42
+
 K = {
     "esc":1,"1":2,"2":3,"3":4,"4":5,"5":6,"6":7,"7":8,"8":9,"9":10,"0":11,
     "minus":12,"equal":13,"backspace":14,"tab":15,
@@ -491,11 +455,9 @@ K = {
     "f9":67,"f10":68,"f11":87,"f12":88,
     "up":103,"left":105,"right":106,"down":108,"delete":111,"del":111,
     "help":138,"insert":110,
-    # Amiga keys → Super/Meta (PUAE maps Left/Right Meta to Amiga keys)
     "amiga":125,"lamiga":125,"leftamiga":125,"leftmeta":125,"super":125,
     "ramiga":126,"rightamiga":126,"rightmeta":126,
 }
-SHIFT = 42
 CHARS = {
     "a":(30,0),"b":(48,0),"c":(46,0),"d":(32,0),"e":(18,0),"f":(33,0),"g":(34,0),"h":(35,0),
     "i":(23,0),"j":(36,0),"k":(37,0),"l":(38,0),"m":(50,0),"n":(49,0),"o":(24,0),"p":(25,0),
@@ -511,6 +473,46 @@ CHARS = {
     ";":(39,0),":":(39,1),"'":(40,0),'"':(40,1),"`":(41,0),"~":(41,1),"\\":(43,0),"|":(43,1),
     ",":(51,0),"<":(51,1),".":(52,0),">":(52,1),"/":(53,0),"?":(53,1)," ":(57,0),
 }
+
+def release_mods(fd):
+    """Only modifiers — never flood KEY_UP for a–z between letters."""
+    for code in (42, 54, 29, 97, 56, 100, 125, 126):
+        try:
+            _write_ev(fd, 1, code, 0)
+        except Exception:
+            pass
+    _t.sleep(0.02)
+
+def tap(code, hold=None):
+    if hold is None:
+        hold = HOLD
+    fd = _open_fd()
+    try:
+        release_mods(fd)
+        _write_ev(fd, 1, code, 1)
+        _t.sleep(hold)
+        _write_ev(fd, 1, code, 0)
+        _t.sleep(GAP)
+    finally:
+        os.close(fd)
+
+def tap_shifted(code, hold=None):
+    if hold is None:
+        hold = HOLD
+    fd = _open_fd()
+    try:
+        release_mods(fd)
+        _write_ev(fd, 1, SHIFT, 1)
+        _t.sleep(0.04)
+        _write_ev(fd, 1, code, 1)
+        _t.sleep(hold)
+        _write_ev(fd, 1, code, 0)
+        _t.sleep(0.03)
+        _write_ev(fd, 1, SHIFT, 0)
+        _t.sleep(GAP)
+    finally:
+        os.close(fd)
+
 def do_key(raw, shift_flag):
     raw = raw or ""
     if len(raw) == 1 and raw in CHARS:
@@ -535,17 +537,20 @@ def do_key(raw, shift_flag):
             tap(K[n])
         return
     raise RuntimeError("unknown key %r" % raw)
+
 def type_string(text):
-    """Type a full string on all host keyboards; keep FDs open for the run."""
-    fds = _open_fds()
+    """Type a full string on ONE open fd — clean down/up per char, no release flood."""
+    fd = _open_fd()
     ok = 0
     skip = 0
     try:
+        release_mods(fd)
+        _t.sleep(0.05)
         for ch in text:
-            if ch == "\n" or ch == "\r":
-                code, need = 28, 0  # enter
+            if ch in ("\n", "\r"):
+                code, need = 28, 0
             elif ch == "\t":
-                code, need = 15, 0  # tab
+                code, need = 15, 0
             elif ch in CHARS:
                 code, need = CHARS[ch]
             else:
@@ -553,22 +558,31 @@ def type_string(text):
                 continue
             try:
                 if need:
-                    _write_all(fds, pack(1, SHIFT, 1) + pack(0, 0, 0))
-                    _t.sleep(0.012)
-                _write_all(fds, pack(1, code, 1) + pack(0, 0, 0))
+                    _write_ev(fd, 1, SHIFT, 1)
+                    _t.sleep(0.04)
+                _write_ev(fd, 1, code, 1)
                 _t.sleep(HOLD)
-                _write_all(fds, pack(1, code, 0) + pack(0, 0, 0))
+                _write_ev(fd, 1, code, 0)
                 if need:
-                    _t.sleep(0.008)
-                    _write_all(fds, pack(1, SHIFT, 0) + pack(0, 0, 0))
+                    _t.sleep(0.03)
+                    _write_ev(fd, 1, SHIFT, 0)
                 ok += 1
                 _t.sleep(GAP)
             except Exception as e:
                 skip += 1
                 sys.stderr.write("skip %r: %s\n" % (ch, e))
+                try:
+                    _write_ev(fd, 1, code, 0)
+                    release_mods(fd)
+                except Exception:
+                    pass
+        release_mods(fd)
     finally:
-        _close_fds(fds)
-    return ok, skip, len(fds)
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+    return ok, skip, kb_name()
 "##;
 
 /// Run a short python snippet on the TV over SSH (muxed). Much faster than control-retroarch.sh.
@@ -626,7 +640,7 @@ fn inject_key_fast(settings: &ConnectionSettings, key: &str, shift: bool) -> Res
         .replace('\r', "");
     let flag = if shift { "1" } else { "0" };
     let script = format!(
-        "{TV_KEY_PY}\ntry:\n  os.unlink(CACHE)\nexcept Exception:\n  pass\n_KB_PATHS=None\ndo_key('{escaped}', {flag})\nprint('ok key=%r shift=%s devices=%d' % ('{escaped}', {flag}, len(kb_paths())))\n"
+        "{TV_KEY_PY}\n_KB_PATH=None\n_KB_NAME=None\ndo_key('{escaped}', {flag})\nprint('ok key=%r shift=%s via=%s ra=%s' % ('{escaped}', {flag}, kb_name(), 'yes' if ra_running() else 'NO'))\n"
     );
     run_tv_python(settings, &script)
 }
@@ -696,9 +710,9 @@ fn inject_mouse_move_fast(
     if dx == 0 && dy == 0 {
         return Ok("ok move dx=0 dy=0".into());
     }
-    // Clamp to keep one packet reasonable
-    let dx = dx.clamp(-800, 800);
-    let dy = dy.clamp(-800, 800);
+    // Allow big swipes so one pad stroke can cross most of a 1080p screen
+    let dx = dx.clamp(-400, 400);
+    let dy = dy.clamp(-400, 400);
     let script = format!(
         "{TV_MOUSE_PY}\ninject_rel({dx}, {dy})\nprint('ok move dx={dx} dy={dy} via=evdev-fast')\n"
     );
@@ -706,44 +720,50 @@ fn inject_mouse_move_fast(
 }
 
 fn type_text_fast(settings: &ConnectionSettings, text: &str) -> Result<String, String> {
-    // simple base64 without extra deps
-    const T: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let bytes = text.as_bytes();
-    let mut out = Vec::with_capacity((bytes.len() + 2) / 3 * 4);
-    let mut i = 0;
-    while i < bytes.len() {
-        let b0 = bytes[i] as u32;
-        let b1 = if i + 1 < bytes.len() {
-            bytes[i + 1] as u32
+    // Same path as Return / single virtual keys: one inject_key_fast per character
+    // with a long gap. Batch type_string was still dropped by PUAE/SDL for words.
+    let mut ok = 0usize;
+    let mut skip = 0usize;
+    let mut last_via = String::from("?");
+    let mut ra_no = false;
+    for ch in text.chars() {
+        if ch == '\r' {
+            continue;
+        }
+        let key = if ch == '\n' {
+            "enter".to_string()
         } else {
-            0
+            ch.to_string()
         };
-        let b2 = if i + 2 < bytes.len() {
-            bytes[i + 2] as u32
-        } else {
-            0
-        };
-        let n = (b0 << 16) | (b1 << 8) | b2;
-        out.push(T[((n >> 18) & 63) as usize]);
-        out.push(T[((n >> 12) & 63) as usize]);
-        out.push(if i + 1 < bytes.len() {
-            T[((n >> 6) & 63) as usize]
-        } else {
-            b'='
-        });
-        out.push(if i + 2 < bytes.len() {
-            T[(n & 63) as usize]
-        } else {
-            b'='
-        });
-        i += 3;
+        match inject_key_fast(settings, &key, false) {
+            Ok(msg) => {
+                ok += 1;
+                if msg.contains("ra=NO") {
+                    ra_no = true;
+                }
+                if let Some(rest) = msg.split("via=").nth(1) {
+                    last_via = rest
+                        .split_whitespace()
+                        .next()
+                        .unwrap_or("?")
+                        .to_string();
+                }
+            }
+            Err(_) => skip += 1,
+        }
+        // Match the UI Send path: wait for PUAE to swallow each key
+        std::thread::sleep(std::time::Duration::from_millis(300));
     }
-    let b64 = String::from_utf8(out).unwrap_or_default();
-    // Drop stale single-device cache so we re-discover CHECK INPUT + friends
-    let script = format!(
-        "{TV_KEY_PY}\nimport base64\ntry:\n  os.unlink(CACHE)\nexcept Exception:\n  pass\n_KB_PATHS=None\ntext=base64.b64decode('{b64}').decode('utf-8','replace')\nok,skip,ndev=type_string(text)\nprint('ok typed=%d skipped=%d devices=%d' % (ok, skip, ndev))\nif ok==0:\n  raise SystemExit('no characters typed')\n"
-    );
-    run_tv_python(settings, &script)
+    if ok == 0 {
+        return Err("no characters typed — is the TV reachable over SSH?".into());
+    }
+    let mut msg = format!("ok typed={ok} skipped={skip} mode=per-key via={last_via}");
+    if ra_no {
+        msg.push_str(
+            "\nWARN: RetroArch may not be running — Play Amiga, focus text field, Send again.",
+        );
+    }
+    Ok(msg)
 }
 
 /// Direct SSH connectivity check (does not require control script).
@@ -2041,6 +2061,33 @@ async fn ra_remove(settings: ConnectionSettings, pick: String) -> Result<String,
     run_control_async(settings, vec!["remove".into(), pick.trim().into()]).await
 }
 
+/// Delete media for any system (amiga, snes, nes, …) via `remove-media <system> <N|name>`.
+#[tauri::command]
+async fn ra_remove_media(
+    settings: ConnectionSettings,
+    system: String,
+    pick: String,
+) -> Result<String, String> {
+    let sys = system.trim().to_ascii_lowercase();
+    let pick = pick.trim();
+    if sys.is_empty() {
+        return Err("system required (e.g. snes, amiga)".into());
+    }
+    if pick.is_empty() {
+        return Err("pick a media number or name to remove".into());
+    }
+    let sys = match sys.as_str() {
+        "megadrive" | "md" => "genesis".into(),
+        "ps1" => "psx".into(),
+        other => other.into(),
+    };
+    run_control_async(
+        settings,
+        vec!["remove-media".into(), sys, pick.into()],
+    )
+    .await
+}
+
 /// Pick local .adf path(s) already chosen in the UI; copy them to the TV disks dir.
 #[tauri::command]
 async fn ra_upload_adfs(
@@ -2773,6 +2820,7 @@ pub fn run() {
             ra_play,
             ra_play_media,
             ra_remove,
+            ra_remove_media,
             ra_upload_adfs,
             amiga_list_sites,
             amiga_list_custom_sites,

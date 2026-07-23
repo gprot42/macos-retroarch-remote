@@ -26,10 +26,10 @@
           </div>
         </div>
         <div class="control-top-actions">
-          <label class="speed" title="Mouse sensitivity on the TV (1 = precise, 10 = fast). Hold Shift while dragging for fine aim.">
+          <label class="speed" title="Mouse sensitivity on the TV (1 = precise, 10 = fast). Lower = more control, higher = faster travel. Hold Shift for fine aim. Hold Shift while dragging for fine aim.">
             Speed
-            <input id="speed" type="range" min="1" max="10" value="6" />
-            <span id="speed-val">6</span>
+            <input id="speed" type="range" min="1" max="10" value="5" />
+            <span id="speed-val">5</span>
           </label>
           <button type="button" id="btn-shift" class="mod" aria-pressed="false" title="Shift">
             Shift
@@ -57,7 +57,7 @@
             aria-label="Mouse trackpad"
           >
             <div class="pad-crosshair"></div>
-            <div class="pad-hint" id="pad-hint">Drag to move</div>
+            <div class="pad-hint" id="pad-hint">Drag to move · double-click to warp</div>
             <div id="pad-cursor" class="pad-cursor" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
                 <path

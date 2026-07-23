@@ -54,6 +54,8 @@ let flushTimer: number | null = null;
 let moveInFlight = false;
 let moveErrors = 0;
 let shiftOn = false;
+/** Local Caps Lock sticky state (also injects Capslock to the TV). */
+let capsOn = false;
 /** When true, physical keys go to the type-input, not the TV */
 let ignorePhysical = false;
 /**
@@ -63,6 +65,9 @@ let ignorePhysical = false;
 let mouseMode: "game" | "pointer" = "game";
 
 const SPEED_KEY = "ra-mouse-speed";
+/** Bump when retuning defaults so old aggressive settings get reset once. */
+const SPEED_TUNE_KEY = "ra-mouse-speed-tune";
+const SPEED_TUNE_VER = "3"; // v3 = controllable, non-jumpy
 
 function speed(): number {
   const v = Number($input("speed").value);
@@ -70,27 +75,29 @@ function speed(): number {
 }
 
 /**
- * Map slider 1–10 → gain. Tuned so mid values cross a 1080p TV easily
- * without making tiny aims impossible.
+ * Map slider 1-10 → base gain.
+ * Kept modest so the pointer does not leap ahead of the finger.
  */
 function speedGain(slider: number): number {
-  // 1→0.45 · 5→1.9 · 8→3.4 · 10→5.0
+  // 1→0.75 · 3→1.2 · 5→1.8 · 7→2.5 · 10→3.8
   const t = Math.max(1, Math.min(10, slider));
-  return 0.25 + t * 0.35 + (t * t) * 0.012;
+  return 0.45 + t * 0.26 + (t * t) * 0.007;
 }
 
 /**
- * Pointer acceleration: small flicks = precise, longer strokes = faster travel.
- * `mag` is pixel distance of this sample on the trackpad.
+ * Mild acceleration only — strong boosts made the cursor jump.
  */
 function accelGain(mag: number): number {
-  // Soft curve: ~0.55 at 1px, ~1.0 at 8px, ~1.8 at 30px, soft ~2.6
   if (mag <= 0) return 0;
-  const g = 0.5 + Math.pow(mag / 10, 0.72) * 0.85;
-  return Math.min(2.6, Math.max(0.45, g));
+  // ~1.0 at 2px, ~1.25 at 12px, ~1.55 at 28px, hard cap 1.65
+  const g = 0.95 + Math.pow(Math.min(mag, 36) / 14, 0.85) * 0.55;
+  return Math.min(1.65, Math.max(0.9, g));
 }
 
-/** Transform raw pad deltas into TV-space REL units. */
+/**
+ * Transform raw pad deltas into TV-space REL units.
+ * Caps per-sample distance so a single event never teleports the cursor.
+ */
 function mapPadToTv(rawDx: number, rawDy: number, precision: boolean): {
   dx: number;
   dy: number;
@@ -98,9 +105,19 @@ function mapPadToTv(rawDx: number, rawDy: number, precision: boolean): {
   const mag = Math.hypot(rawDx, rawDy);
   if (mag === 0) return { dx: 0, dy: 0 };
   let gain = speedGain(speed()) * accelGain(mag);
-  // Shift = precision aim (~40%)
-  if (precision) gain *= 0.4;
-  return { dx: rawDx * gain, dy: rawDy * gain };
+  // Shift = precision aim (very fine)
+  if (precision) gain *= 0.28;
+  let dx = rawDx * gain;
+  let dy = rawDy * gain;
+  // Hard cap per sample (TV pixels). Stops "jumps" when movementX spikes.
+  const maxStep = precision ? 28 : 72;
+  const outMag = Math.hypot(dx, dy);
+  if (outMag > maxStep) {
+    const s = maxStep / outMag;
+    dx *= s;
+    dy *= s;
+  }
+  return { dx, dy };
 }
 
 function queueMove(dx: number, dy: number) {
@@ -111,7 +128,7 @@ function queueMove(dx: number, dy: number) {
   pendingDx += dx;
   pendingDy += dy;
   if (flushTimer == null && !moveInFlight) {
-    // ~1 frame at 60Hz — snappier than 32ms while still coalescing
+    // Steady ~60Hz coalescing — avoids burst packets that feel like jumps
     flushTimer = window.setTimeout(() => {
       flushTimer = null;
       void flushMove();
@@ -135,19 +152,19 @@ async function flushMove() {
   residualDy = fy - dy;
 
   // Never drop a meaningful move to zero
-  if (dx === 0 && Math.abs(fx) >= 0.35) {
+  if (dx === 0 && Math.abs(fx) >= 0.45) {
     dx = fx > 0 ? 1 : -1;
     residualDx = fx - dx;
   }
-  if (dy === 0 && Math.abs(fy) >= 0.35) {
+  if (dy === 0 && Math.abs(fy) >= 0.45) {
     dy = fy > 0 ? 1 : -1;
     residualDy = fy - dy;
   }
   if (dx === 0 && dy === 0) return;
 
-  // Clamp extreme bursts (fast path also clamps)
-  dx = Math.max(-600, Math.min(600, dx));
-  dy = Math.max(-600, Math.min(600, dy));
+  // Cap coalesced packet — large dumps felt like the cursor leaping ahead
+  dx = Math.max(-280, Math.min(280, dx));
+  dy = Math.max(-280, Math.min(280, dy));
 
   moveInFlight = true;
   try {
@@ -511,6 +528,10 @@ function paintShiftLabels() {
     b.classList.toggle("on", shiftOn);
     b.setAttribute("aria-pressed", shiftOn ? "true" : "false");
   });
+  document.querySelectorAll<HTMLButtonElement>(".key.caps, .key[data-key='caps']").forEach((b) => {
+    b.classList.toggle("on", capsOn);
+    b.setAttribute("aria-pressed", capsOn ? "true" : "false");
+  });
   const shiftBtn = $("btn-shift");
   if (shiftBtn) {
     shiftBtn.setAttribute("aria-pressed", shiftOn ? "true" : "false");
@@ -528,6 +549,9 @@ function enqueueKey(key: string, shift = false) {
     status("No settings — reopen mouse window");
     return;
   }
+  // Immediate short feedback so long SSH tips don't linger and confuse
+  const show = key.length === 1 ? key : key;
+  status(`Sending “${show}”…`);
   keyQ.push({ key, shift });
   // Cap queue so a stuck TV can't pile up forever
   if (keyQ.length > 64) keyQ.splice(0, keyQ.length - 64);
@@ -539,7 +563,7 @@ async function flushKeyQueue() {
   keyFlushing = true;
   try {
     while (keyQ.length && settings) {
-      // Batch consecutive plain characters into one type-text call
+      // One key / short burst at a time — avoid multi-char type_text tips on single taps
       const first = keyQ[0];
       if (first.key.length === 1 && !first.shift) {
         let text = "";
@@ -547,35 +571,56 @@ async function flushKeyQueue() {
           keyQ.length &&
           keyQ[0].key.length === 1 &&
           !keyQ[0].shift &&
-          text.length < 24
+          text.length < 8
         ) {
           text += keyQ.shift()!.key;
         }
         try {
+          // Prefer per-key inject so status stays short and reliable
           if (text.length === 1) {
-            await invoke<string>("ra_keyboard_key", {
+            const r = await invoke<string>("ra_keyboard_key", {
               settings,
               key: text,
               shift: false,
             });
+            const raNo = /ra=NO/i.test(r || "");
+            status(
+              raNo
+                ? `Key “${text}” sent, but RetroArch is not running — Play Amiga first.`
+                : `Key “${text}” → TV`,
+            );
           } else {
-            await invoke<string>("ra_type_text", { settings, text });
+            // Still one SSH type for a short burst of letters
+            for (const ch of text) {
+              await invoke<string>("ra_keyboard_key", {
+                settings,
+                key: ch,
+                shift: false,
+              });
+            }
+            status(`Keys “${text}” → TV`);
           }
-          status(`typed ${text.length > 12 ? text.slice(0, 12) + "…" : text}`);
         } catch (e) {
-          status(String(e));
+          status(`Key failed: ${String(e)}`);
         }
         continue;
       }
       const item = keyQ.shift()!;
       try {
-        await invoke<string>("ra_keyboard_key", {
+        const r = await invoke<string>("ra_keyboard_key", {
           settings,
           key: item.key,
           shift: item.shift,
         });
+        const raNo = /ra=NO/i.test(r || "");
+        const label = item.key.length === 1 ? item.key : item.key;
+        status(
+          raNo
+            ? `Key “${label}” sent, but RetroArch is not running — Play Amiga first.`
+            : `Key “${label}” → TV`,
+        );
       } catch (e) {
-        status(String(e));
+        status(`Key failed: ${String(e)}`);
       }
     }
   } finally {
@@ -590,10 +635,28 @@ async function sendKbKey(def: KeyDef) {
     // Shift is a sticky toggle (handled in pointerdown) — don't re-send as a key
     if (def.key === "shift") return;
 
+    // Caps Lock is sticky in the UI + one Capslock inject to the TV
+    if (def.key === "caps" || def.key === "capslock") {
+      capsOn = !capsOn;
+      paintShiftLabels();
+      enqueueKey("caps", false);
+      status(
+        capsOn
+          ? "Caps Lock ON — press Caps again to turn off"
+          : "Caps Lock OFF",
+      );
+      return;
+    }
+
     if (def.ch || def.shiftCh) {
-      const ch = shiftOn ? def.shiftCh || def.ch! : def.ch!;
+      // Prefer explicit shifted character when Shift is sticky
+      let ch = shiftOn ? def.shiftCh || def.ch! : def.ch!;
+      // Local caps (without Shift) uppercases letters for the Amiga
+      if (!shiftOn && capsOn && ch.length === 1 && /[a-z]/i.test(ch)) {
+        ch = ch.toUpperCase();
+      }
       enqueueKey(ch, false);
-      if (shiftOn && def.ch) {
+      if (shiftOn) {
         shiftOn = false;
         paintShiftLabels();
       }
@@ -719,6 +782,11 @@ function buildKeyboard() {
         if (def.key === "shift") {
           shiftOn = !shiftOn;
           paintShiftLabels();
+          status(
+            shiftOn
+              ? "Shift ON — next key is shifted (press Shift again to cancel)"
+              : "Shift OFF",
+          );
           return;
         }
         void sendKbKey(def);
@@ -749,6 +817,14 @@ function escapeKb(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * Send a whole line the same way Return works: one SSH key inject per character.
+ * Batch type-text paths were unreliable on webOS (hello → nothing / only last letter).
+ */
 async function sendText() {
   if (!settings) return;
   const text = $input("type-input").value;
@@ -757,15 +833,51 @@ async function sendText() {
     return;
   }
   const preview = text.length > 40 ? `${text.slice(0, 40)}…` : text;
-  status(`Sending ${text.length} char(s) to Amiga: “${preview}”…`);
+  status(
+    `Sending “${preview}” one key at a time (${text.length} keys)…\n` +
+      `Amiga must be Playing with a text field focused.`,
+  );
+
+  let ok = 0;
+  let fail = 0;
+  let raNo = false;
   try {
-    const r = await invoke<string>("ra_type_text", { settings, text });
-    const msg = (r || "").trim();
-    status(
-      msg
-        ? `${msg}\n(If nothing appears: click the Amiga text field first, ensure a Workbench/CLI or game accepts keyboard, and puae keyboard pass-through is on.)`
-        : `Sent ${text.length} char(s).`,
-    );
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === "\r") continue;
+      const key = ch === "\n" ? "enter" : ch;
+      try {
+        const r = await invoke<string>("ra_keyboard_key", {
+          settings,
+          key,
+          shift: false,
+        });
+        ok += 1;
+        if (/ra=NO/i.test(r || "")) raNo = true;
+        status(
+          `Sending “${preview}”… ${ok}/${text.length}  (just sent “${key === " " ? "space" : key}”)`,
+        );
+      } catch (e) {
+        fail += 1;
+        status(`Failed on “${key}”: ${String(e)}`);
+        // keep going so partial words still arrive
+      }
+      // Wait for PUAE to accept each key (Return-sized gap between letters)
+      await sleepMs(320);
+    }
+    if (raNo) {
+      status(
+        `Sent ${ok} key(s), fail ${fail} — but RetroArch may not be running.\n` +
+          `→ Play an Amiga disk, click the text field, Send again.`,
+      );
+    } else if (ok === 0) {
+      status(`Nothing was sent (fail ${fail}). Check network / SSH.`);
+    } else {
+      status(
+        `Done: sent “${preview}” (${ok} keys${fail ? `, ${fail} failed` : ""}).\n` +
+          `If the Amiga is blank: click the text field, then Send again.`,
+      );
+    }
   } catch (e) {
     status(`Type failed: ${String(e)}`);
   }
@@ -780,7 +892,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   // Default game mode: no system cursor (showing it pauses RetroArch audio on webOS)
   mouseMode = "game";
   status(
-    "Ready — drag to move · Speed slider · hold Shift = precision aim · music stays on",
+    "Ready — smooth mouse · Speed slider · Shift = fine aim · double-click pad to warp",
   );
 
   kbMode = loadKbMode();
@@ -796,18 +908,25 @@ window.addEventListener("DOMContentLoaded", async () => {
   const cursor = $("pad-cursor");
   const speedEl = $input("speed");
   const speedVal = $("speed-val");
-  // Wider range 1–10; default 6 (comfortable for 1080p TV)
+  // Wider range 1-10; default 5 (controllable — raise slider if you want faster)
   speedEl.min = "1";
   speedEl.max = "10";
   try {
+    const tune = localStorage.getItem(SPEED_TUNE_KEY);
     const saved = localStorage.getItem(SPEED_KEY);
-    if (saved && Number(saved) >= 1 && Number(saved) <= 10) {
-      speedEl.value = saved;
-    } else if (!speedEl.value || Number(speedEl.value) < 5) {
-      speedEl.value = "6";
+    const n = saved != null ? Number(saved) : NaN;
+    if (tune !== SPEED_TUNE_VER) {
+      // One-time reset after jumpy high-gain builds
+      speedEl.value = "5";
+      localStorage.setItem(SPEED_KEY, "5");
+      localStorage.setItem(SPEED_TUNE_KEY, SPEED_TUNE_VER);
+    } else if (Number.isFinite(n) && n >= 1 && n <= 10) {
+      speedEl.value = String(n);
+    } else {
+      speedEl.value = "5";
     }
   } catch {
-    if (!speedEl.value || Number(speedEl.value) < 5) speedEl.value = "6";
+    speedEl.value = "5";
   }
   speedVal.textContent = speedEl.value;
   speedEl.addEventListener("input", () => {
@@ -819,8 +938,16 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  let cursorX = 0;
-  let cursorY = 0;
+  /**
+   * Virtual TV pointer in screen space. The pad is a mini map of the TV:
+   * the glyph is drawn at the same relative position we believe the TV cursor
+   * is at. We can't read absolute position from webOS, so we integrate the
+   * same REL deltas we send over SSH (1:1 with the TV).
+   */
+  const TV_W = 1920;
+  const TV_H = 1080;
+  let tvX = TV_W / 2;
+  let tvY = TV_H / 2;
   let padW = 0;
   let padH = 0;
 
@@ -830,42 +957,69 @@ window.addEventListener("DOMContentLoaded", async () => {
     padH = r.height;
   }
 
-  function paintCursor() {
-    cursor.style.setProperty("--cx", `${cursorX}px`);
-    cursor.style.setProperty("--cy", `${cursorY}px`);
+  function paintCursorFromTv() {
+    measurePad();
+    // Map TV coords → pad pixels (tip of arrow ~ hot-spot at 0,0 of glyph)
+    const cx = (tvX / TV_W) * Math.max(1, padW - 4);
+    const cy = (tvY / TV_H) * Math.max(1, padH - 4);
+    cursor.style.setProperty("--cx", `${cx}px`);
+    cursor.style.setProperty("--cy", `${cy}px`);
   }
 
-  function clampCursor(x: number, y: number) {
-    measurePad();
-    const margin = 2;
-    const maxX = Math.max(margin, padW - 18);
-    const maxY = Math.max(margin, padH - 18);
+  function clampTv(x: number, y: number) {
     return {
-      x: Math.max(margin, Math.min(maxX, x)),
-      y: Math.max(margin, Math.min(maxY, y)),
+      x: Math.max(0, Math.min(TV_W, x)),
+      y: Math.max(0, Math.min(TV_H, y)),
     };
   }
 
-  function placeCursor(x: number, y: number) {
-    const c = clampCursor(x, y);
-    cursorX = c.x;
-    cursorY = c.y;
-    paintCursor();
-  }
-
-  function moveCursorBy(dx: number, dy: number) {
-    placeCursor(cursorX + dx, cursorY + dy);
+  /** Apply a TV-space delta to our model + paint pad (call with same values as queueMove). */
+  function applyTvDelta(dx: number, dy: number) {
+    const c = clampTv(tvX + dx, tvY + dy);
+    tvX = c.x;
+    tvY = c.y;
+    paintCursorFromTv();
   }
 
   function centerCursor() {
+    tvX = TV_W / 2;
+    tvY = TV_H / 2;
+    paintCursorFromTv();
+  }
+
+  /** Warp model + send REL to TV so pad position matches a click on the mini-map. */
+  async function warpToPadPoint(clientX: number, clientY: number) {
     measurePad();
-    placeCursor(padW / 2 - 4, padH / 2 - 4);
+    const rect = pad.getBoundingClientRect();
+    const lx = Math.max(0, Math.min(padW, clientX - rect.left));
+    const ly = Math.max(0, Math.min(padH, clientY - rect.top));
+    const targetX = (lx / Math.max(1, padW)) * TV_W;
+    const targetY = (ly / Math.max(1, padH)) * TV_H;
+    let ddx = targetX - tvX;
+    let ddy = targetY - tvY;
+    tvX = targetX;
+    tvY = targetY;
+    paintCursorFromTv();
+    // Send in chunks (fast path clamps ~±1400)
+    while (Math.abs(ddx) > 0.5 || Math.abs(ddy) > 0.5) {
+      const sx = Math.max(-400, Math.min(400, Math.round(ddx)));
+      const sy = Math.max(-400, Math.min(400, Math.round(ddy)));
+      if (sx === 0 && sy === 0) break;
+      ddx -= sx;
+      ddy -= sy;
+      queueMove(sx, sy);
+      await yieldToUiMouse();
+    }
+    void flushMove();
+  }
+
+  function yieldToUiMouse(): Promise<void> {
+    return new Promise((r) => requestAnimationFrame(() => r()));
   }
 
   centerCursor();
   window.addEventListener("resize", () => {
-    measurePad();
-    placeCursor(cursorX, cursorY);
+    paintCursorFromTv();
   });
 
   let dragging = false;
@@ -935,16 +1089,17 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     if (rawDx === 0 && rawDy === 0) return;
 
-    // Ignore single-pixel jitter when not moving much (trackpad noise)
+    // Ignore only tiny sensor noise (keep small moves so aim stays easy)
     const mag = Math.hypot(rawDx, rawDy);
-    if (mag < 0.4) return;
+    if (mag < 0.35) return;
 
     movedDist += mag;
-    moveCursorBy(rawDx, rawDy);
 
     // Shift held during drag = precision (also used for drag-to-hold LMB)
     const precision = e.shiftKey && !leftHeld;
     const mapped = mapPadToTv(rawDx, rawDy, precision);
+    // Pad glyph tracks the same TV-space deltas we inject (not raw pad pixels)
+    applyTvDelta(mapped.dx, mapped.dy);
     queueMove(mapped.dx, mapped.dy);
   };
 
@@ -974,11 +1129,33 @@ window.addEventListener("DOMContentLoaded", async () => {
         Math.hypot(e.clientX - downX, e.clientY - downY),
       );
       if (dt < 280 && dist < 10) {
+        // Short tap = left click at current TV position (no warp — keeps aim)
         flashClick("left");
         void click("left");
       }
     }
   };
+
+  // Double-click the pad: warp TV pointer to that mini-map position (re-sync)
+  let lastTapT = 0;
+  let lastTapX = 0;
+  let lastTapY = 0;
+  pad.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    const now = performance.now();
+    const dist = Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY);
+    if (now - lastTapT < 320 && dist < 28) {
+      pad.classList.add("has-moved");
+      $("pad-hint").textContent = "";
+      status("Warp → TV position (pad is a mini-map of the screen)");
+      void warpToPadPoint(e.clientX, e.clientY);
+      lastTapT = 0;
+    } else {
+      lastTapT = now;
+      lastTapX = e.clientX;
+      lastTapY = e.clientY;
+    }
+  });
 
   pad.addEventListener("pointerdown", onPointerDown);
   pad.addEventListener("pointermove", onPointerMove);
@@ -1053,22 +1230,18 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  const nudgeLocal = (dx: number, dy: number) => {
-    moveCursorBy(dx * 0.4, dy * 0.4);
-    pad.classList.add("has-moved");
-    $("pad-hint").textContent = "";
-  };
-
   document.querySelectorAll<HTMLButtonElement>("[data-nudge]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const [dx, dy] = (btn.dataset.nudge || "0,0").split(",").map(Number);
-      // Nudges: fixed steps scaled by speed gain (not full accel)
+      // Nudges: larger fixed steps so arrow/nudge buttons feel useful
       const g = speedGain(speed());
-      const rdx = Math.round((dx / 40) * 14 * g);
-      const rdy = Math.round((dy / 40) * 14 * g);
+      const rdx = Math.round((dx / 40) * 18 * g);
+      const rdy = Math.round((dy / 40) * 18 * g);
       const sx = rdx === 0 && dx !== 0 ? (dx > 0 ? 1 : -1) : rdx;
       const sy = rdy === 0 && dy !== 0 ? (dy > 0 ? 1 : -1) : rdy;
-      nudgeLocal(sx * 2, sy * 2);
+      applyTvDelta(sx, sy);
+      pad.classList.add("has-moved");
+      $("pad-hint").textContent = "";
       queueMove(sx, sy);
       status(`nudge ${sx},${sy}`);
     });
@@ -1101,6 +1274,11 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("btn-shift").addEventListener("click", () => {
     shiftOn = !shiftOn;
     paintShiftLabels();
+    status(
+      shiftOn
+        ? "Shift ON — next key is shifted (press Shift again to cancel)"
+        : "Shift OFF",
+    );
   });
   $("btn-send-text").addEventListener("click", () => void sendText());
   $("btn-clear-text").addEventListener("click", () => {
@@ -1139,25 +1317,25 @@ window.addEventListener("DOMContentLoaded", async () => {
     const s = speed() * 12;
     if (e.key === "ArrowUp" && e.shiftKey) {
       e.preventDefault();
-      nudgeLocal(0, -s);
+      applyTvDelta(0, -s);
       queueMove(0, -s);
       return;
     }
     if (e.key === "ArrowDown" && e.shiftKey) {
       e.preventDefault();
-      nudgeLocal(0, s);
+      applyTvDelta(0, s);
       queueMove(0, s);
       return;
     }
     if (e.key === "ArrowLeft" && e.shiftKey) {
       e.preventDefault();
-      nudgeLocal(-s, 0);
+      applyTvDelta(-s, 0);
       queueMove(-s, 0);
       return;
     }
     if (e.key === "ArrowRight" && e.shiftKey) {
       e.preventDefault();
-      nudgeLocal(s, 0);
+      applyTvDelta(s, 0);
       queueMove(s, 0);
       return;
     }

@@ -85,6 +85,42 @@ function setConnBadge(state: ConnBadgeState, label: string, detail?: string) {
   );
 }
 
+/** True when an error looks like Mac↔TV network / SSH is down. */
+function isNetworkishError(msg: string): boolean {
+  return /timed out|timeout|no route|host is down|could not resolve|connection refused|network is unreachable|Operation timed out|Broken pipe|No route to host|unreachable|Connection reset|ssh:|Network is down|Host is unreachable|connect failed|Control socket/i.test(
+    msg,
+  );
+}
+
+/**
+ * Authoritative network icon: quick TCP probe to the TV host.
+ * Call after boot (and when in doubt) so a local-only success cannot leave a false green.
+ * Uses saved settings host (same as Fix network); keep form saved for accuracy.
+ */
+async function refreshNetworkBadgeFromProbe(opts?: { quiet?: boolean }): Promise<boolean> {
+  const s = readForm();
+  const label = `${s.user || "root"}@${s.host || "?"}`;
+  try {
+    // Fast TCP open (not a full SSH handshake) — fails quickly when network is down
+    const ok = await invoke<boolean>("check_tv_reachable");
+    if (ok) {
+      setConnBadge("ok", label);
+      return true;
+    }
+    const detail = `TV not reachable at ${s.host}:${s.port || 22}`;
+    setConnBadge("err", `Unreachable ${s.host || "?"}`, detail);
+    if (!opts?.quiet) {
+      log(`${detail}. Click the red network icon to Fix network.`, true);
+    }
+    return false;
+  } catch (e) {
+    const msg = formatError(e);
+    setConnBadge("err", summarizeError(msg), msg);
+    if (!opts?.quiet) log(msg, true);
+    return false;
+  }
+}
+
 /**
  * Top-bar network icon (wifi): green = reachable, red = not → hover shows “Fix network”.
  * Settings panel button still gets a green text highlight when OK.
@@ -513,16 +549,23 @@ const ROM_CATALOG: Record<Exclude<CatalogSystemId, "amiga">, CatalogSite[]> = {
   genesis: [
     {
       n: 1,
-      id: "sega-genesis-romset",
-      label: "Mega Drive / Genesis set",
-      desc: "Sega Genesis / Mega Drive ROM pack",
+      id: "megadrive-roms",
+      label: "Mega Drive / Genesis (curated)",
+      desc: "~60 individual ZIP ROMs — good for a quick try",
       category: "games",
     },
     {
       n: 2,
-      id: "SegaGenesisRoms",
-      label: "Genesis ROMs (alt)",
-      desc: "Alternate Genesis collection",
+      id: "sega-genesis-romset-ultra-usa",
+      label: "Genesis USA set (large)",
+      desc: "Large USA Super/Genesis ZIP set (many titles)",
+      category: "games",
+    },
+    {
+      n: 3,
+      id: "nointro.md",
+      label: "No-Intro Mega Drive (complete)",
+      desc: "Full No-Intro Mega Drive / Genesis set (.7z files)",
       category: "games",
     },
   ],
@@ -561,23 +604,23 @@ const ROM_CATALOG: Record<Exclude<CatalogSystemId, "amiga">, CatalogSite[]> = {
   n64: [
     {
       n: 1,
+      id: "nintendo-64-rom-super-mario-64",
+      label: "Super Mario 64 (single)",
+      desc: "One ZIP — Super Mario 64 (quick try)",
+      category: "games",
+    },
+    {
+      n: 2,
       id: "n64-archive-netmanyagi",
       label: "N64 Archive (large)",
       desc: "Large Nintendo 64 ZIP set (hundreds of titles)",
       category: "games",
     },
     {
-      n: 2,
+      n: 3,
       id: "n64patchedwrestlingroms",
       label: "N64 wrestling (patched)",
       desc: "Small N64 wrestling ROM pack",
-      category: "games",
-    },
-    {
-      n: 3,
-      id: "nintendo-64-rom-super-mario-64",
-      label: "Super Mario 64 (single)",
-      desc: "Single-game pack — good for a quick try",
       category: "games",
     },
   ],
@@ -690,11 +733,12 @@ function catalogSystemDef(id: CatalogSystemId): CatalogSystemDef {
         id,
         label: "Nintendo 64",
         chip: "N64",
-        ...core("Mupen64Plus-Next", "n64"),
+        ...core("ParaLLEl N64", "n64"),
         sites: ROM_CATALOG.n64,
         hintHtml:
           "<strong>Nintendo 64</strong> — install to <code>disks/n64</code>. " +
-          "Core: <strong>Mupen64Plus-Next</strong> (heavy on webOS).",
+          "Core: <strong>ParaLLEl N64</strong> (recommended on webOS). " +
+          "Avoid the newest webosbrew Mupen64Plus-Next unless your RetroArch ships GLIBCXX ≥ 3.4.32.",
         searchPlaceholder: "Search within selected N64 library…",
       };
     case "psx":
@@ -1085,22 +1129,29 @@ async function loadCatalogSites() {
     catalogAllSites = def.sites.map((s, i) => ({ ...s, n: i + 1 }));
     catalogSites = catalogAllSites.slice();
     applyCategoryFilter();
+    // Auto-open the first library so SNES/N64/… are never a blank right pane
+    if (catalogSites.length && !catalogSiteId) {
+      void selectCatalogSite(catalogSites[0].id);
+    }
     return;
   }
 
-  // Amiga — load from setup-amiga.sh
+  // Amiga — load from setup-amiga.sh (local script; does NOT prove TV is reachable)
   try {
     const settings = readForm();
     const out = await invoke<string>("amiga_list_sites", {
       settings,
       category: null,
     });
-    setConnBadge("ok", `${settings.user}@${settings.host}`);
+    // Do not setConnBadge("ok") here — list-sites can succeed offline and left a false green.
     return await finishLoadCatalogSites(out);
   } catch (e) {
     const err = formatError(e);
     log(err, true);
-    setConnBadge("err", summarizeError(err), err);
+    // Only paint network red for real connectivity failures (path/script errors stay local)
+    if (isNetworkishError(err)) {
+      setConnBadge("err", summarizeError(err), err);
+    }
     const short = summarizeError(err, 120);
     box.innerHTML = `<div class="empty err-empty">Failed to load Amiga sites.<br/><span class="err-detail">${escapeHtml(short)}</span><br/><span class="muted">Fix Control script path in Settings (folder must also contain setup-amiga.sh).</span></div>`;
     return;
@@ -1248,18 +1299,25 @@ async function removeCustomCatalogSite(id: string) {
   }
 }
 
-async function selectCatalogSite(id: string) {
+async function selectCatalogSite(id: string, opts?: { keepSearch?: boolean }) {
   catalogSiteId = id;
   catalogMode = "site";
   catalogOffset = 0;
-  catalogSearch = $input("catalog-search").value.trim();
+  // Leftover search (e.g. from Amiga) was zeroing single-file packs like SM64.
+  // Clear unless the user is intentionally re-filtering within the same list.
+  if (!opts?.keepSearch) {
+    $input("catalog-search").value = "";
+    catalogSearch = "";
+  } else {
+    catalogSearch = $input("catalog-search").value.trim();
+  }
   document.querySelectorAll(".site-item").forEach((el) => {
     el.classList.toggle(
       "selected",
       (el as HTMLElement).dataset.siteId === id,
     );
   });
-  await loadCatalogAdfs();
+  await loadCatalogAdfs({ refresh: false });
 }
 
 function renderCatalogResults(
@@ -1417,10 +1475,10 @@ async function loadCatalogAdfs(opts?: { refresh?: boolean }) {
     syncCatalogToolbar();
     return;
   }
-  renderCatalogResults(
-    parseCatalogAdfs(out),
-    `No titles match${catalogSearch ? ` “${catalogSearch}”` : ""}.`,
-  );
+  const empty = catalogSearch
+    ? `No titles match “${catalogSearch}” in this library. Clear the search box (or click the library again) to list everything.`
+    : "No playable ROMs found in this library (or catalog failed to load). Try Refresh.";
+  renderCatalogResults(parseCatalogAdfs(out), empty);
 }
 
 /** Cross-site search for games / demos / utilities. */
@@ -1448,17 +1506,14 @@ async function runCatalogSearch(opts?: { refresh?: boolean }) {
       const first =
         catalogSites[0] || catalogSystemDef(catalogSystem).sites?.[0];
       if (first) {
-        catalogSiteId = first.id;
-        document.querySelectorAll(".site-item").forEach((el) => {
-          el.classList.toggle(
-            "selected",
-            (el as HTMLElement).dataset.siteId === first.id,
-          );
-        });
+        // keepSearch: user just typed a term and hit Search
+        await selectCatalogSite(first.id, { keepSearch: true });
+        return;
       }
     }
     catalogOffset = 0;
     catalogMode = "site";
+    catalogSearch = catalogSearch; // already set above
     await loadCatalogAdfs(opts);
     return;
   }
@@ -1798,9 +1853,12 @@ let screensaverDisabledThisSession = false;
 
 function isDisableScreensaverOpt(): boolean {
   try {
-    return localStorage.getItem(SS_OPT_KEY) === "1";
+    const v = localStorage.getItem(SS_OPT_KEY);
+    // Default ON — only an explicit "0" turns it off
+    if (v === null || v === "") return true;
+    return v === "1";
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -1944,8 +2002,10 @@ const KNOWN_OTHER_CORES: { file: string; label: string }[] = [
   { file: "snes9x2010_libretro.so", label: "Super Nintendo (snes9x2010)" },
   { file: "fceumm_libretro.so", label: "NES / Famicom (FCEUmm)" },
   { file: "nestopia_libretro.so", label: "NES / Famicom (Nestopia)" },
+  // Prefer ParaLLEl first in install UI (works on stock RA 1.22.2 libstdc++).
+  // Current webosbrew Mupen needs GLIBCXX_3.4.32; use May-2025 mupen or parallel.
+  { file: "parallel_n64_libretro.so", label: "Nintendo 64 (ParaLLEl N64) — recommended on webOS" },
   { file: "mupen64plus_next_libretro.so", label: "Nintendo 64 (Mupen64Plus-Next)" },
-  { file: "parallel_n64_libretro.so", label: "Nintendo 64 (ParaLLEl N64)" },
   { file: "gpsp_libretro.so", label: "Game Boy Advance (gpSP)" },
   { file: "gambatte_libretro.so", label: "Game Boy / Color (gambatte)" },
   // Sega
@@ -2059,7 +2119,9 @@ const CORE_FAMILIES: {
     accent: "#15803d",
     amiga: false,
     filterHints: ["n64", "mupen", "nintendo 64"],
-    prefer: ["mupen64plus_next_libretro.so", "parallel_n64_libretro.so"],
+    // Prefer ParaLLEl N64 on webOS: Mupen64Plus-Next from current webosbrew
+    // cores needs GLIBCXX_3.4.32; RA 1.22.2 ships libstdc++ max 3.4.30 → crash.
+    prefer: ["parallel_n64_libretro.so", "mupen64plus_next_libretro.so"],
     match: (f, l) => /mupen|parallel_n64|(^|[^a-z])n64([^a-z]|$)|nintendo.?64/i.test(`${f} ${l}`),
   },
   {
@@ -4525,6 +4587,13 @@ async function stopPadMouseMapping() {
   }
 }
 
+/** True if this pad line is our GameSir (incl. PS4-mode "Wireless Controller"). */
+function isGameSirPadName(name: string): boolean {
+  return /gamesir|game.?sir|nova|wireless\s*controller|ps4\s*controller/i.test(
+    name || "",
+  );
+}
+
 /** Parse `pad|name|event|js|score` (or legacy `pad|name`) lines from list-gamepads. */
 function parseGamepadList(raw: string): {
   pads: { name: string; detail: string }[];
@@ -4539,8 +4608,12 @@ function parseGamepadList(raw: string): {
     if (!t || t.startsWith("#")) continue;
     if (t.startsWith("pad|")) {
       const parts = t.slice(4).split("|");
-      const name = (parts[0] || "").trim();
+      let name = (parts[0] || "").trim();
       if (!name) continue;
+      // list-gamepads may already send "GameSir (PS4 mode)"; normalize raw HID names.
+      if (/^wireless\s*controller$/i.test(name) || /^ps4\s*controller$/i.test(name)) {
+        name = "GameSir (PS4 mode)";
+      }
       const rest = parts
         .slice(1)
         .map((p) => p.trim())
@@ -4586,7 +4659,7 @@ function lastKnownPadNames(): string[] {
   }
 }
 
-/** Top-right gamepad icon: green when live, amber when paired/asleep, red if none. */
+/** Top-right gamepad icon: green = live input, amber = paired/asleep, red = none. */
 function setPadBadge(
   state: "ok" | "missing" | "busy" | "idle" | "wake",
   pads?: { name: string; detail: string }[],
@@ -4602,18 +4675,20 @@ function setPadBadge(
   const tip = el.querySelector(".pad-badge-tip");
   if (state === "ok" && pads?.length) {
     const names = pads.map((p) => p.name).join(", ");
-    el.title = `Gamepad detected: ${names} — click to re-check / reconnect`;
-    el.setAttribute("aria-label", `Gamepad detected: ${names}`);
+    el.title = `Gamepad live: ${names} — click to re-check`;
+    el.setAttribute("aria-label", `Gamepad live: ${names}`);
     if (tip) tip.textContent = names;
+    stopPadLiveWatch();
   } else if (state === "wake") {
     el.title =
       extraTitle ||
-      "Gamepad paired but asleep — press a button on the pad, then click again";
+      "Yellow = paired on TV, but not live yet. Press Home/A on the pad (pairing is fine). Ring turns green when the HID link is up.";
     el.setAttribute(
       "aria-label",
-      "Gamepad paired but not connected — press a button to wake",
+      "Gamepad paired but asleep — press a button to wake",
     );
-    if (tip) tip.textContent = "Wake Gamepad";
+    if (tip) tip.textContent = "Paired · press button";
+    startPadLiveWatch();
   } else if (state === "missing") {
     const last = lastKnownPadNames();
     if (last.length) {
@@ -4623,10 +4698,12 @@ function setPadBadge(
         `No live gamepad (last seen: ${who}). Bond stays on the TV — click to reconnect, or re-pair only if TV Bluetooth list is empty.`;
       el.setAttribute("aria-label", `Reconnect gamepad (last seen ${who})`);
       if (tip) tip.textContent = "Reconnect";
+      startPadLiveWatch();
     } else {
       el.title = extraTitle || "Pair Gamepad";
       el.setAttribute("aria-label", "Pair Gamepad");
       if (tip) tip.textContent = "Pair Gamepad";
+      stopPadLiveWatch();
     }
   } else if (state === "busy") {
     el.title =
@@ -4638,6 +4715,62 @@ function setPadBadge(
     el.title = "Pair Gamepad";
     el.setAttribute("aria-label", "Pair Gamepad");
     if (tip) tip.textContent = "Pair Gamepad";
+  }
+}
+
+/** While yellow/red with a known pad: poll for live input so the ring goes green without another click. */
+let padLiveWatchTimer: ReturnType<typeof setInterval> | null = null;
+let padLiveWatchUntil = 0;
+
+function stopPadLiveWatch() {
+  if (padLiveWatchTimer != null) {
+    clearInterval(padLiveWatchTimer);
+    padLiveWatchTimer = null;
+  }
+  padLiveWatchUntil = 0;
+}
+
+function startPadLiveWatch() {
+  // Refresh window of background polls after each wake/missing state
+  padLiveWatchUntil = Date.now() + 120_000; // 2 minutes
+  if (padLiveWatchTimer != null) return;
+  padLiveWatchTimer = setInterval(() => {
+    void pollPadLiveQuiet();
+  }, 2500);
+}
+
+/** Quiet list-gamepads only — flips yellow → green when the pad wakes. */
+async function pollPadLiveQuiet() {
+  if (padDetectInFlight) return;
+  if (!padLiveWatchUntil || Date.now() > padLiveWatchUntil) {
+    stopPadLiveWatch();
+    return;
+  }
+  const el = document.getElementById("pad-badge");
+  if (!el) return;
+  // Stop if already green
+  if (el.classList.contains("ok")) {
+    stopPadLiveWatch();
+    return;
+  }
+  // Only auto-promote from wake/missing
+  if (!el.classList.contains("wake") && !el.classList.contains("missing")) {
+    return;
+  }
+  try {
+    const settings = readForm();
+    const padsOut = await invoke<string>("ra_list_gamepads", { settings });
+    const { pads } = parseGamepadList(padsOut || "");
+    if (pads.length) {
+      rememberLivePads(pads);
+      setPadBadge("ok", pads);
+      log(
+        `Gamepad live: ${pads.map((p) => p.name).join(", ")} (auto-detected after wake)`,
+      );
+      stopPadLiveWatch();
+    }
+  } catch {
+    /* ignore probe errors during watch */
   }
 }
 
@@ -4804,8 +4937,16 @@ async function detectPadBadge(opts?: {
 
       // Poll with short list-gamepads only — never stack full reconnect mid-wait
       // (extra reconnect SSH was a common beachball source while the badge pulsed).
-      const pollMs = 700;
-      const pollCount = autoReconnect && quiet ? 8 : 10; // ~5.6s / ~7s
+      // Longer window when TV reports a paired bond (yellow → green after button press).
+      const pollMs = 650;
+      const pollCount =
+        autoReconnect && quiet
+          ? pairedWake || pairedNames.length
+            ? 14 // ~9s when we know a bond exists
+            : 8
+          : pairedWake || pairedNames.length
+            ? 16 // ~10s user click with paired pad
+            : 12;
       for (let i = 0; i < pollCount; i++) {
         setPadBadge(
           "busy",
@@ -4836,8 +4977,8 @@ async function detectPadBadge(opts?: {
         } catch {
           /* keep polling */
         }
-        // Single light re-kick halfway (at most once)
-        if (i === 4) {
+        // Light re-kick a few times while waiting for the user to press a button
+        if (i === 3 || i === 8 || i === 12) {
           try {
             await invoke<string>("ra_reconnect_gamepad", { settings });
             await yieldToUi();
@@ -4867,16 +5008,20 @@ async function detectPadBadge(opts?: {
     }
 
     // Paired but not live → amber “wake” ring (not red). Bond is still on TV.
+    // Yellow ≠ failed pair — it means “bonded, waiting for live HID / button press”.
     if (pairedWake || pairedNames.length) {
       const who = pairedNames.join(", ") || "gamepad";
       setPadBadge(
         "wake",
         undefined,
-        `${who} still paired on TV — power on + press a button, then click again`,
+        `${who}: paired on TV (yellow). Press Home/A now — ring turns green when live. No re-pair needed.`,
       );
       if (!quiet || autoReconnect) {
         log(
-          `Paired pad (${who}) is bonded on the TV but asleep. Power it on, press Home/A — no need to re-pair.`,
+          `Paired pad (${who}) is on the TV Bluetooth list but not live yet.\n` +
+            "  · Yellow ring = pairing OK, HID asleep\n" +
+            "  · Press Home / A / any button — badge turns green automatically\n" +
+            "  · Do not re-pair unless the TV no longer lists the pad",
           true,
         );
       }
@@ -4888,13 +5033,14 @@ async function detectPadBadge(opts?: {
       setPadBadge(
         "wake",
         undefined,
-        `${lastKnown.join(", ")} not live — click to reconnect (TV bond usually still exists)`,
+        `${lastKnown.join(", ")}: not live (yellow). Press a button or click the icon — bond usually still on TV.`,
       );
       if (!quiet || autoReconnect) {
         log(
-          `No live pad input. Last seen: ${lastKnown.join(", ")}. ` +
-            "If it is still listed under TV Bluetooth, click the gamepad icon (do not re-pair). " +
-            "Only re-pair if the TV no longer shows the controller.",
+          `No live pad input. Last seen: ${lastKnown.join(", ")}.\n` +
+            "  · Yellow = we still expect this pad (not a failed pair)\n" +
+            "  · Press a button on the pad; the ring turns green when the TV sees it\n" +
+            "  · Only re-pair if TV Bluetooth no longer shows the controller",
           true,
         );
       }
@@ -4998,14 +5144,17 @@ async function refreshPadMouseStatus(opts?: {
               .map((p) => `  • ${p.name}${p.detail ? ` (${p.detail})` : ""}`)
               .join("\n"),
         );
-        const gamesir = pads.find((p) =>
-          /gamesir|game.?sir|nova/i.test(p.name),
-        );
+        const gamesir = pads.find((p) => isGameSirPadName(p.name));
         if (gamesir) {
-          log(`GameSir-like pad found: ${gamesir.name}`);
+          log(
+            `GameSir identified: ${gamesir.name}` +
+              (gameir.detail ? ` (${gamesir.detail})` : "") +
+              " — PS4-mode pads report as “Wireless Controller” (Sony 054c:09cc); that is expected.",
+          );
         } else {
           log(
-            "No device named GameSir/Nova — if your pad is paired, it may use a generic HID name above.",
+            "No GameSir-like pad (name or Wireless Controller HID). Pair GameSir on TV Bluetooth, wake it, Detect again.",
+            true,
           );
         }
       }
@@ -5420,6 +5569,8 @@ async function reloadAdfs(opts?: { busy?: boolean; quiet?: boolean }) {
     const short = summarizeError(lastErr || "SSH failed", 100);
     box.innerHTML = `<div class="empty err-empty">Could not list media on TV<br/><span class="err-detail">${escapeHtml(short)}</span><br/><span class="muted">Check Settings → Connection, then Reload.</span></div>`;
     if (!opts?.quiet) log(`Media list failed: ${lastErr || short}`, true);
+    // Always paint red on total media-list failure (boot used to leave idle/green)
+    setConnBadge("err", short, lastErr || short);
     return;
   }
 
@@ -5549,39 +5700,44 @@ async function reloadAdfs(opts?: { busy?: boolean; quiet?: boolean }) {
         });
         actions.appendChild(playBtn);
 
-        // Remove is Amiga-only for now (control script remove targets disks/amiga)
-        if (it.system === "amiga") {
-          const removeBtn = document.createElement("button");
-          removeBtn.type = "button";
-          removeBtn.className = "remove";
-          removeBtn.textContent = "Remove";
-          removeBtn.title = `Delete ${it.name} from the TV`;
-          removeBtn.addEventListener("click", async () => {
-            const ok = window.confirm(
-              `Remove "${it.name}" from the TV?\n\nThis deletes the file under disks/amiga and cannot be undone.`,
-            );
-            if (!ok) return;
-            log(`Removing Amiga #${it.idx} ${it.name}…`);
-            removeBtn.disabled = true;
-            removeBtn.textContent = "…";
-            await yieldToUi();
-            try {
-              const r = await run<string>("ra_remove", { pick: it.idx });
-              if (r != null) {
-                log(r.trimEnd());
-                if (playingAdfName === it.name) playingAdfName = null;
-                await reloadAdfs();
-              } else {
-                removeBtn.disabled = false;
-                removeBtn.textContent = "Remove";
-              }
-            } catch {
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "remove";
+        removeBtn.textContent = "Remove";
+        removeBtn.title = `Delete ${it.name} from the TV (disks/${it.system})`;
+        removeBtn.addEventListener("click", async () => {
+          const ok = window.confirm(
+            `Remove "${it.name}" from the TV?\n\nThis deletes the file under disks/${it.system} and cannot be undone.`,
+          );
+          if (!ok) return;
+          log(`Removing ${sysLabel} #${it.idx} ${it.name}…`);
+          removeBtn.disabled = true;
+          removeBtn.textContent = "…";
+          await yieldToUi();
+          try {
+            let r: string | null = null;
+            if (it.system === "amiga") {
+              r = await run<string>("ra_remove", { pick: it.idx });
+            } else {
+              r = await run<string>("ra_remove_media", {
+                system: it.system,
+                pick: it.idx,
+              });
+            }
+            if (r != null) {
+              log(r.trimEnd());
+              if (playingAdfName === it.name) playingAdfName = null;
+              await reloadAdfs();
+            } else {
               removeBtn.disabled = false;
               removeBtn.textContent = "Remove";
             }
-          });
-          actions.appendChild(removeBtn);
-        }
+          } catch {
+            removeBtn.disabled = false;
+            removeBtn.textContent = "Remove";
+          }
+        });
+        actions.appendChild(removeBtn);
       } else {
         const note = document.createElement("span");
         note.className = "media-play-note";
@@ -5626,11 +5782,14 @@ async function reloadCores(opts?: { busy?: boolean; quiet?: boolean }) {
     if (!opts?.quiet) {
       log(`Engines on TV failed: ${lastErr || short}`, true);
     }
-    // Don't paint network badge red on a listing glitch if SSH otherwise works
+    // Network/SSH failure → red. Script parse glitches that aren't networkish leave badge alone.
+    if (!lastErr || isNetworkishError(lastErr)) {
+      setConnBadge("err", short, lastErr || short);
+    }
     return;
   }
 
-  // Success path: keep conn badge green if we got data
+  // Success path: keep conn badge green if we got data from the TV
   try {
     const s = readForm();
     setConnBadge("ok", `${s.user}@${s.host}`);
@@ -6369,7 +6528,10 @@ window.addEventListener("DOMContentLoaded", async () => {
         loadCatalogSites(),
         setDefaultTvVolume(),
       ]);
-      // Idempotent; quiet = one green/red summary line, no network-badge thrash
+      // Authoritative badge: local catalog/list-sites must not leave a false green
+      // when the TV is actually unreachable.
+      await refreshNetworkBadgeFromProbe({ quiet: true });
+      // Idempotent; quiet = no network-badge thrash (probe above owns the icon)
       await setupController({ refresh: false, quiet: true, busy: false });
       // Optional: keep TV screensaver off while this Mac app is open
       if (isDisableScreensaverOpt()) {
