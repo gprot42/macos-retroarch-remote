@@ -2025,7 +2025,7 @@ async fn ra_play(settings: ConnectionSettings, pick: String) -> Result<String, S
     run_control_async(settings, vec!["play".into(), pick.trim().into()]).await
 }
 
-/// Launch content for any system (amiga, snes, nes, genesis, gba, gbc, n64, psx).
+/// Launch content for any system (amiga, snes, nes, genesis, gba, gbc, n64, psx, neogeo).
 /// Uses control-retroarch.sh `play-media <system> <N|name>`.
 #[tauri::command]
 async fn ra_play_media(
@@ -2044,6 +2044,7 @@ async fn ra_play_media(
     let sys = match sys.as_str() {
         "megadrive" | "md" => "genesis".into(),
         "ps1" => "psx".into(),
+        "neo-geo" | "neo_geo" | "ng" => "neogeo".into(),
         other => other.into(),
     };
     run_control_async(
@@ -2079,6 +2080,7 @@ async fn ra_remove_media(
     let sys = match sys.as_str() {
         "megadrive" | "md" => "genesis".into(),
         "ps1" => "psx".into(),
+        "neo-geo" | "neo_geo" | "ng" => "neogeo".into(),
         other => other.into(),
     };
     run_control_async(
@@ -2335,7 +2337,7 @@ pub struct AdfInstallItem {
 
 /// Install ADFs/ROMs from Archive.org file URLs already shown in the UI.
 /// Avoids re-searching the catalog (broken on titles with `$` `[]` etc.).
-/// `content_system`: amiga (default), snes, nes, genesis, gba, gbc, n64, psx.
+/// `content_system`: amiga (default), snes, nes, genesis, gba, gbc, n64, psx, neogeo.
 #[tauri::command]
 async fn amiga_install_urls(
     settings: ConnectionSettings,
@@ -2357,13 +2359,15 @@ async fn amiga_install_urls(
         .unwrap_or_else(|| "amiga".into());
     let sys = match sys.as_str() {
         "snes" | "nes" | "genesis" | "megadrive" | "gba" | "gbc" | "gb" | "n64" | "psx"
-        | "ps1" | "amiga" => {
+        | "ps1" | "neogeo" | "neo-geo" | "neo_geo" | "ng" | "amiga" => {
             if sys == "megadrive" {
                 "genesis".into()
             } else if sys == "gb" {
                 "gbc".into()
             } else if sys == "ps1" {
                 "psx".into()
+            } else if sys == "neo-geo" || sys == "neo_geo" || sys == "ng" {
+                "neogeo".into()
             } else {
                 sys
             }

@@ -482,7 +482,8 @@ type CatalogSystemId =
   | "gba"
   | "gbc"
   | "n64"
-  | "psx";
+  | "psx"
+  | "neogeo";
 
 let catalogSystem: CatalogSystemId = "amiga";
 
@@ -495,6 +496,7 @@ const CATALOG_SYSTEM_IDS: CatalogSystemId[] = [
   "gbc",
   "n64",
   "psx",
+  "neogeo",
 ];
 
 type CatalogSystemDef = {
@@ -647,6 +649,29 @@ const ROM_CATALOG: Record<Exclude<CatalogSystemId, "amiga">, CatalogSite[]> = {
       category: "games",
     },
   ],
+  neogeo: [
+    {
+      n: 1,
+      id: "Neo-geoRomCollectionByGhostware",
+      label: "Neo Geo ROM collection",
+      desc: "MVS/AES-style ZIP sets (FBNeo) — install individual titles",
+      category: "games",
+    },
+    {
+      n: 2,
+      id: "neogeoaesmvscomplete",
+      label: "Neo Geo AES/MVS (complete)",
+      desc: "Large complete AES/MVS romset — pick single game ZIPs",
+      category: "games",
+    },
+    {
+      n: 3,
+      id: "neo-geo-aes-romset",
+      label: "Neo Geo AES set",
+      desc: "AES-focused ZIP set (~2GB library)",
+      category: "games",
+    },
+  ],
 };
 
 function catalogSystemDef(id: CatalogSystemId): CatalogSystemDef {
@@ -752,6 +777,20 @@ function catalogSystemDef(id: CatalogSystemId): CatalogSystemDef {
           "<strong>PlayStation 1</strong> — install to <code>disks/psx</code> (large images). " +
           "Core: <strong>PCSX ReARMed</strong> or SwanStation. Prefer CHD when available.",
         searchPlaceholder: "Search within selected PS1 library…",
+      };
+    case "neogeo":
+      return {
+        id,
+        label: "Neo Geo",
+        chip: "Neo Geo",
+        ...core("FinalBurn Neo", "neogeo"),
+        sites: ROM_CATALOG.neogeo,
+        hintHtml:
+          "<strong>SNK Neo Geo (AES/MVS)</strong> — install to <code>disks/neogeo</code>. " +
+          "Core: <strong>FinalBurn Neo</strong> (or Geolith for <code>.neo</code> dumps). " +
+          "FBNeo usually needs <code>neogeo.zip</code> BIOS in the system folder. " +
+          "Keep MAME-style ZIP names; only use titles you are legally entitled to.",
+        searchPlaceholder: "Search within selected Neo Geo library…",
       };
   }
 }
@@ -2014,6 +2053,10 @@ const KNOWN_OTHER_CORES: { file: string; label: string }[] = [
   // Sony
   { file: "pcsx_rearmed_libretro.so", label: "PlayStation 1 (PCSX ReARMed)" },
   { file: "swanstation_libretro.so", label: "PlayStation 1 (SwanStation)" },
+  // SNK Neo Geo
+  { file: "fbneo_libretro.so", label: "Neo Geo / Arcade (FinalBurn Neo) — recommended" },
+  { file: "geolith_libretro.so", label: "Neo Geo (Geolith)" },
+  { file: "fbalpha2012_neogeo_libretro.so", label: "Neo Geo (FB Alpha 2012)" },
 ];
 
 /**
@@ -2029,6 +2072,7 @@ const ENGINE_LOGOS: Record<string, string> = {
   gbc: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="10" fill="#4b5563"/><rect x="14" y="8" width="20" height="32" rx="3" fill="#9ca3af"/><rect x="17" y="12" width="14" height="12" rx="1" fill="#111827"/><circle cx="20" cy="30" r="2" fill="#ef4444"/><circle cx="28" cy="30" r="2" fill="#3b82f6"/></svg>`,
   n64: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="10" fill="#14532d"/><path d="M14 34 V14 L24 28 L34 14 V34" fill="none" stroke="#86efac" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="24" r="3" fill="#fbbf24"/></svg>`,
   psx: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="10" fill="#0f172a"/><circle cx="18" cy="18" r="5" fill="none" stroke="#22d3ee" stroke-width="2.2"/><rect x="26" y="14" width="9" height="9" fill="none" stroke="#a78bfa" stroke-width="2.2"/><path d="M14 34 L19 26 L24 34" fill="none" stroke="#f472b6" stroke-width="2.2" stroke-linejoin="round"/><path d="M28 26 L34 26 M31 26 V34" fill="none" stroke="#4ade80" stroke-width="2.2" stroke-linecap="round"/></svg>`,
+  neogeo: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="10" fill="#1a1a1a"/><rect x="8" y="12" width="32" height="24" rx="3" fill="#fbbf24"/><text x="24" y="29" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="900" font-size="11" fill="#111">NEO</text></svg>`,
   other: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="10" fill="#374151"/><rect x="12" y="12" width="24" height="24" rx="4" fill="#6b7280"/><circle cx="24" cy="24" r="6" fill="#9ca3af"/></svg>`,
 };
 
@@ -2148,6 +2192,24 @@ const CORE_FAMILIES: {
       /gambatte|sameboy|tgbdual|gb_libretro|gbc/i.test(`${f} ${l}`) &&
       !/gba|advance/i.test(`${f} ${l}`),
   },
+  {
+    id: "neogeo",
+    title: "Neo Geo",
+    short: "Neo Geo",
+    engineLabel: "Neo Geo engine",
+    accent: "#fbbf24",
+    amiga: false,
+    filterHints: ["fbneo", "neogeo", "geolith"],
+    prefer: [
+      "fbneo_libretro.so",
+      "geolith_libretro.so",
+      "fbalpha2012_neogeo_libretro.so",
+    ],
+    match: (f, l) =>
+      /fbneo|geolith|fbalpha2012_neogeo|neo.?geo|(^|[^a-z])neogeo([^a-z]|$)/i.test(
+        `${f} ${l}`,
+      ),
+  },
 ];
 
 function engineFamilyFor(file: string, label: string) {
@@ -2180,6 +2242,7 @@ type CoreScope =
   | "genesis"
   | "psx"
   | "n64"
+  | "neogeo"
   | "other"
   | "all";
 let coreCatalogScope: CoreScope = "amiga";
@@ -2191,6 +2254,7 @@ const CORE_SCOPE_IDS: CoreScope[] = [
   "genesis",
   "psx",
   "n64",
+  "neogeo",
   "other",
   "all",
 ];
@@ -2224,6 +2288,8 @@ function coreScopeLabel(scope: CoreScope): string {
       return "PS1 engines";
     case "n64":
       return "N64 engines";
+    case "neogeo":
+      return "Neo Geo engines";
     case "other":
       return "other engines";
     case "all":
@@ -2241,6 +2307,7 @@ function renderEngineScopeChips(host: HTMLElement | null) {
     { id: "genesis", label: "Genesis", logo: "genesis" },
     { id: "psx", label: "PS1", logo: "psx" },
     { id: "n64", label: "N64", logo: "n64" },
+    { id: "neogeo", label: "Neo Geo", logo: "neogeo" },
     { id: "other", label: "Other", logo: "other" },
     { id: "all", label: "All", logo: "other" },
   ];
@@ -5403,6 +5470,7 @@ const PLAYABLE_MEDIA_SYSTEMS = new Set([
   "gbc",
   "n64",
   "psx",
+  "neogeo",
 ]);
 
 /** Whether this app can launch the file with Play (needs matching engine on TV). */
@@ -5428,6 +5496,8 @@ function isMediaPlayable(system: string, name: string): boolean {
       return /\.(n64|z64|v64|zip|7z)$/i.test(n);
     case "psx":
       return /\.(pbp|cue|chd|iso|img|mdf|toc|m3u|bin|zip|7z)$/i.test(n);
+    case "neogeo":
+      return /\.(zip|7z|neo)$/i.test(n);
     default:
       return false;
   }
@@ -5500,6 +5570,8 @@ function mediaSystemLabel(sys: string): string {
       return "N64";
     case "psx":
       return "PS1";
+    case "neogeo":
+      return "Neo Geo";
     default:
       return sys.toUpperCase() || "Media";
   }
@@ -5594,7 +5666,18 @@ async function reloadAdfs(opts?: { busy?: boolean; quiet?: boolean }) {
     list.push(it);
     bySys.set(it.system, list);
   }
-  const order = ["amiga", "snes", "nes", "genesis", "gba", "gb", "gbc", "n64", "psx"];
+  const order = [
+    "amiga",
+    "snes",
+    "nes",
+    "genesis",
+    "gba",
+    "gb",
+    "gbc",
+    "n64",
+    "psx",
+    "neogeo",
+  ];
   const systems = [
     ...order.filter((s) => bySys.has(s)),
     ...[...bySys.keys()].filter((s) => !order.includes(s)).sort(),
