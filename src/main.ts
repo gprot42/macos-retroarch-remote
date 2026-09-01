@@ -5215,7 +5215,7 @@ async function refreshPadMouseStatus(opts?: {
         if (gamesir) {
           log(
             `GameSir identified: ${gamesir.name}` +
-              (gameir.detail ? ` (${gamesir.detail})` : "") +
+              (gamesir.detail ? ` (${gamesir.detail})` : "") +
               " — PS4-mode pads report as “Wireless Controller” (Sony 054c:09cc); that is expected.",
           );
         } else {
