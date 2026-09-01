@@ -2,11 +2,9 @@
 
 > **We do not support piracy.**
 >
-> This project follows [RetroArch / Libretro](https://www.libretro.com/)'s official position:
+> We will not have anything to do with any kind of piracy, or the promotion/facilitation thereof. We do not support or condone in any way the unlicensed distribution of copyrighted ROMs elsewhere on the internet. This project does not promote or endorse willful copyright infringement.
 >
-> We at Libretro will not have anything to do with any kind of piracy, or the promotion/facilitation thereof. We do not support or condone in any way the unlicensed distribution of copyrighted ROMs elsewhere on the internet. Libretro as an entity and project does not promote or endorse willful copyright infringement.
->
-> RetroArch and Libretro do not share any copyrighted system files or game content. You must provide your own BIOS and content in accordance with your local laws as applicable. We assume everyone dumps their own games in accordance with the laws and statutes applicable to their locale.
+> We do not share any copyrighted system files or game content. You must provide your own BIOS and content in accordance with your local laws as applicable. We assume everyone dumps their own games in accordance with the laws and statutes applicable to their locale.
 
 Tauri 2 + Bun + TypeScript desktop app to **control and configure RetroArch on a rooted webOS LG TV** over SSH.
 
