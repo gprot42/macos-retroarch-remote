@@ -8,6 +8,10 @@ It wraps the existing CLI:
 RetroArch/webos/control-retroarch.sh
 ```
 
+![RetroArch Remote main window](screenshots/main-window.png)
+
+![Controller mapping settings](screenshots/controller-settings.png)
+
 ## Features (v0.1)
 
 - Connection settings (host, user, SSH key, script path)
